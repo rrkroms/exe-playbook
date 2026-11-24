@@ -1,0 +1,11 @@
+{
+  "title": "EXE Playbook",
+  "description": "Running Windows applications and games on Android, ARM Linux, x86 Linux, macOS, and ChromeOS.",
+  "author": "rrkroms",
+  "root": ".",
+  "structure": {
+    "readme": "README.md",
+    "summary": "SUMMARY.md"
+  },
+  "plugins": []
+}
