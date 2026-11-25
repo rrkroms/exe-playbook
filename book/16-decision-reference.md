@@ -20,15 +20,15 @@ What host are you on?
         |                                  DXVK+MoltenVK only (KosmicKrisp is Apple-Silicon-only)
         |                                  -> module 12
         |
-        +-- ARM Linux ---------------------> FEX / Box64 / Box86
-                                           add muvm only on 16K-page hosts (Asahi, some Snapdragon)
-        |                                  -> module 11
+         +-- ARM Linux ---------------------> FEX / Box64 / Box86
+         |                                  add muvm only on 16K-page hosts (Asahi, some Snapdragon)
+         |                                  -> module 11
         |
         +-- ARM Chromebook ----------------> Crostini + VirGL/Venus, limited
         |                                  -> module 12
         |
-        +-- Android ARM64 -----------------> frontend or Termux DIY
-                                           -> modules 09, 10
+         +-- Android ARM64 -----------------> frontend or Termux DIY
+         |                                  -> modules 09, 10
 ```
 
 ## 16.2 What CPU translation does the game need?
@@ -41,7 +41,7 @@ What host are you on?
 | 32-bit x86 Windows | ARM64 | FEX WoW64 DLL, Box32, Box86, or 32-bit Wine under translator |
 | Windows ARM64 | ARM64 | Native; no x86 translation |
 | Windows ARM64EC | ARM64 | Native ARM64EC process with FEX backend for x86 parts |
-| 16-bit Windows | Any | Effectively unsupported in current Wine |
+| 16-bit Windows | x86 | Wine 11.0 supports it in the new WoW64 mode; ARM64 unverified |
 
 ## 16.3 What graphics API does the game use?
 

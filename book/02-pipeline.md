@@ -93,7 +93,7 @@ At this stage, common failures include:
 - a missing 32-bit or 64-bit Wine component;
 - a corrupt or incompatible prefix;
 - a missing DLL;
-- an unsupported executable format (16-bit, .NET, or a kernel driver);
+- an unsupported executable format (a 16-bit build on a host/version that lacks support, .NET without a runtime, or a kernel driver);
 - a path or permission problem.
 
 ## 2.5 Stage 4: CPU translation begins
