@@ -2,6 +2,8 @@
 
 **Scope:** running legacy Windows D3D/Glide titles on non-Windows hosts, verified 2026-11-23. "Latest" = newest release visible on the primary release page at that date.
 
+> **2026-11-25 correction note.** Chapters 05 and 06 supersede this brief on version-sensitive points. Key corrections: DXVK-Sarek v1.14.1 includes D7VK v2.2; dgVoodoo2 v2.87.6 was re-released 2026-10-26 and its author states Wine/Linux is not a target; upstream DXVK 3.x requires no `d3dcompiler` DLL; standalone D8VK is discontinued and merged into DXVK. This brief remains a historical research snapshot.
+
 ## 1. Tool matrix
 
 | Tool | Source API → destination API | Official repo / docs | License | Supported hosts | Status / latest (Nov 2026) | Important notes |

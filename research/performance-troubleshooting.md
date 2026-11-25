@@ -1,5 +1,7 @@
 # Research Brief — Performance, Troubleshooting, Compatibility & Anti-Cheat (Nov 2026)
 
+> **2026-11-25 correction note.** Chapters 13–15 supersede this brief on verified points. Key corrections: FEX uses `Logging.ProfileStats`/`FEX_PROFILESTATS`, not `FEX_LOG_LEVEL`; `BOX64_DYNACACHE_LIMIT` has the 2048 MiB default; Mesa 26.3.1 was current at the snapshot; D7VK v1.3+ uses `D7VK_` log variables; EAC Linux v2 loads no kernel module; Wine 10.0 required 4K pages but Wine 11.0 simulates 4K on larger-page hosts; Wine 11.0 restored 16-bit support; dxvk-gplasync and RICOCHET details are in chapters 13 and 15. This brief remains a historical research snapshot.
+
 [V]=primary source. "Impossible locally" = impossible inside Wine/Proton/emulator userspace model without vendor-supported Linux component; no bypass guidance.
 
 ## 1. Bottleneck analysis

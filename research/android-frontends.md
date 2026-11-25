@@ -1,5 +1,7 @@
 # Research Brief — Android Windows-Gaming Frontends and Tools (Nov 2026)
 
+> **2026-11-25 correction note.** A primary-source audit supersedes the snapshot values in this brief. Use `book/09-android-frontends.md` and `book/07-gpu-drivers.md` for current versions, licences, statuses and URLs. Key superseded values: GameHub Lite v5.1.7 → v5.1.8; Bannerlator v3.1.8 → v3.2.2; GameHub date 2025-10-30 → 2026-10-30; Pluvia v1.3.2 date 2026-03-02 → 2025-03-02; Mesa 26.2.x → 26.3.1 (26.2.7 was the final 26.2.x maintenance release). WinNative, Bannerlator, MiceWine and Vectras VM now have verified upstream URLs in chapter 09. This brief remains a historical research snapshot.
+
 ## 1. Comparison matrix
 
 | Name | Dev / maintainer | Official repo/site | License | Status/latest | Root? | Android/ABI | Bundled components | Display | Container | Notes |
