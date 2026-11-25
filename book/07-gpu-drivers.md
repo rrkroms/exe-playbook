@@ -143,7 +143,7 @@ sysmem and gmem are two Adreno render paths: **sysmem** renders to system memory
 
 ## 7.5 Driver matrix by GPU family
 
-The table below reflects the research snapshot (Mesa 26.2.x, November 2026). Treat version numbers as a snapshot, not guarantees. “GL” means a Mesa OpenGL driver; “Vulkan 1.x” is the advertised API version.
+The table below reflects a 2026-11-25 snapshot (Mesa 26.3.1; 26.2.7 was the final 26.2.x maintenance release). Treat version numbers as a snapshot, not guarantees. “GL” means a Mesa OpenGL driver; “Vulkan 1.x” is the advertised API version.
 
 | GPU family | Driver(s) | APIs | Kernel path | License | Status / limits |
 |---|---|---|---|---|---|
@@ -168,7 +168,7 @@ Two cross-cutting notes:
 
 Turnip is Mesa's Vulkan driver for Adreno, shipped as part of [Freedreno](https://docs.mesa3d.org/drivers/freedreno.html). It is a real driver, not an emulator.
 
-**Version labels.** Mesa uses `YY.N` releases (for example 26.2). Community builds add their own revision schemes such as “26.0.0 R8”. These are *not* comparable across builders. Always read the commit or tag a build names; a number alone is not enough to know what code you are running.
+**Version labels.** Mesa uses `YY.N` releases (for example 26.3). Community builds add their own revision schemes such as “26.0.0 R8”. These are *not* comparable across builders. Always read the commit or tag a build names; a number alone is not enough to know what code you are running.
 
 **Chip support.** A6xx parts 640/650/660 are mature; A7xx parts 710/720/722/725/730/732/735/740/750 have Vulkan 1.4; A8xx OpenGL arrived in Mesa 26.0 with Vulkan still experimental. There is no A5xx support.
 
@@ -179,11 +179,11 @@ Turnip is Mesa's Vulkan driver for Adreno, shipped as part of [Freedreno](https:
 **Safe recipe for the reference tablet (Adreno 730):**
 
 1. Keep the stock Qualcomm driver for the Android UI; inject Turnip only into the game process.
-2. Use a stable upstream Mesa release (26.2.x at the snapshot date) or a community build that explicitly names its upstream commit.
+2. Use a stable upstream Mesa release (26.3.1 at the 2026-11-25 snapshot; 26.2.7 was the final 26.2.x maintenance release) or a community build that explicitly names its upstream commit. Winlator 11.2 uses a Mesa Turnip 26.2.0 branch build rather than stock upstream Mesa.
 3. Prefer plain “A6xx/A7xx Standard” builds over specialised variants.
-4. Do **not** apply the A740 UBWC hint on a 730; it is a different GPU and the flag is a known flicker trigger on A740 [NEEDS VERIFICATION — community report].
+4. Do **not** copy A740-specific UBWC hints to a 730 without testing: the hint is documented for One UI / A740-gen2 UI corruption, but no primary source confirms a flicker penalty on A740 or A730 [NEEDS VERIFICATION — community report].
 5. Avoid random re-uploaded ZIPs with no commit hash; a mislabelled build for a different Adreno generation is common.
-6. Community reports favour Turnip 26.0.0 R8 and Qualcomm v615.77 [NEEDS VERIFICATION — community preference, not a primary-source recommendation; treat as anecdote, not guidance].
+6. Community lists favour Turnip 26.0.0 R8 (published 2026-01-08) and Qualcomm v615.77 for A730 [NEEDS VERIFICATION — anecdotal, not a primary recommendation; newer Turnip builds exist].
 
 If a specific game regresses, step back one known-good build rather than chasing “latest”.
 

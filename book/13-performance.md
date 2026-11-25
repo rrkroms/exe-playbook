@@ -68,11 +68,11 @@ Key knobs and measurements:
 |---|---|---|
 | `BOX64_DYNAREC_TRACE` | DynaRec decisions | High volume; use briefly |
 | `BOX64_DYNAREC_PERFMAP=1` | Map for `perf` analysis | Pair with Linux `perf` |
-| FEX `ProfileStats` | Translator profile stats | Config setting, not a `FEX_LOG_LEVEL` variable `[NEEDS VERIFICATION]` — the current FEX config schema does not document `FEX_LOG_LEVEL`; the collected brief marks this unverified. Check the FEX docs for your build before relying on it. |
-| `BOX64_DYNACACHE` | Translation cache toggle/size | Verify the current Box64 documentation for actual size and reservation |
+| FEX `Logging.ProfileStats` | Translator profile stats | Config key (`FEX_PROFILESTATS` in env form), read by supported MangoHud builds. `FEX_LOG_LEVEL` is not a generated env var in the current config schema — check your build before relying on it. |
+| `BOX64_DYNACACHE` | Translation cache toggle | `0` disables, `1` enables (default), `2` uses existing files without generating new ones; `BOX64_DYNACACHE_LIMIT` sets folder size (default: 2048 MiB) |
 | `BOX64_SKIPCPU` / `BOX64_MAXCPU` | CPU affinity / core skipping | Relevant on big.LITTLE designs |
 
-**DynaRec versus interpreter.** Box64's dynamic recompiler is reported to be roughly 5–10× faster than its interpreter. Running with the interpreter enabled, or on a translator build without DynaRec for your host ISA, is a first-class performance bug. Confirm which mode your frontend actually selected; frontends often expose this as a toggle.
+**DynaRec versus interpreter.** Box64's own README reports that its dynamic recompiler is roughly 5–10× faster than its interpreter; treat that as a project-wide figure, not a per-game benchmark. Running with the interpreter enabled — or on a translator build without DynaRec for your host ISA — is a first-class performance bug. Confirm which mode your frontend actually selected; frontends often expose this as a toggle.
 
 **Big.LITTLE caution.** On phones and Snapdragon-class laptops, cores differ. If the game's main thread lands on an efficiency core, a CPU-bound title will stutter regardless of GPU speed. One core pinned at 100% on ARM while the GPU is mostly idle points straight at this layer. [NEEDS VERIFICATION] for any specific affinity command on Android: standard `taskset` is often unavailable in the Android sandbox, and the correct approach depends on whether your frontend grants shell-level access.
 
@@ -86,9 +86,9 @@ The expensive part for multithreaded games is often **synchronisation**: Windows
 |---|---|---|
 | esync | Obsolete in Proton 11.0 | Do not spend time tuning it on modern Proton |
 | fsync | Uses Linux futex; auto-disabled if `FUTEX_WAIT_MULTIPLE` is unavailable | Kernel support matters |
-| ntsync | Kernel char device `/dev/ntsync`; complete in mainline Linux 6.14; Wine 11.0 headline support | Proton 11.0 enables it automatically when the device can be opened |
+| ntsync | Kernel char device `/dev/ntsync`; complete in mainline Linux 6.14; initial support reported in Wine 10.15, headline feature in Wine 11.0 | Proton 11.0 enables it automatically when the device can be opened |
 
-Check ntsync with `lsof /dev/ntsync` on a desktop Linux host. Proton's opt-out is `PROTON_NO_NTSYNC`; the brief specifically notes there is no `PROTON_NTSYNC=1` enable switch. Sources: the [kernel ntsync documentation](https://docs.kernel.org/userspace-api/ntsync.html), the [Wine 11.0 announcement](https://www.winehq.org/announce/11.0), and the [Debian ntsync HOWTO](https://wiki.debian.org/Wine/NtsyncHowto).
+Check ntsync with `lsof /dev/ntsync` on a desktop Linux host. Proton 11.0 documents only the opt-out `PROTON_NO_NTSYNC`; there is no `PROTON_NTSYNC=1` enable switch in the official docs. Sources: the [kernel ntsync documentation](https://docs.kernel.org/userspace-api/ntsync.html), the [Wine 11.0 announcement](https://www.winehq.org/announce/11.0), the [Debian ntsync HOWTO](https://wiki.debian.org/Wine/NtsyncHowto), and the [Proton 11.0 README](https://github.com/ValveSoftware/Proton/tree/proton_11.0), which notes that the older enable switch is obsolete.
 
 The kernel documentation's key point is conceptual: userspace cannot match Windows-equivalent performance while faithfully emulating these semantics. That is why making ntsync available is a platform-level improvement, not a game setting. On Android, where you have a Linux kernel but a restricted userspace, availability depends on whether the device kernel includes the driver and whether the container can reach the device node — `[NEEDS VERIFICATION]` per device.
 
@@ -100,7 +100,7 @@ The game's graphics API selects the translator:
 |---|---|---|
 | D3D9/10/11 | [DXVK](https://github.com/doitsujin/dxvk) | `DXVK_HUD`, `DXVK_LOG_LEVEL` |
 | D3D12 | [VKD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) | `VKD3D_PROFILE_PATH`, `VKD3D_DEBUG` |
-| D3D8 | [D8VK](https://github.com/AlpyneDreams/d8vk) | DXVK-derived HUD |
+| D3D8 | [DXVK](https://github.com/doitsujin/dxvk) via `d3d8.dll` + `d3d9.dll` | `DXVK_HUD`; standalone D8VK not required (merged into DXVK 2.4) |
 | D3D7 | [D7VK](https://github.com/WinterSnowfall/d7vk) | DXVK-derived HUD |
 | OpenGL | native GL, [Zink](https://docs.mesa3d.org/drivers/zink.html), or WineD3D | `ZINK_DEBUG`, Mesa env vars |
 | Legacy fixed function | [WineD3D](https://gitlab.winehq.org/wine/wine) | Wine debug channels |
@@ -115,9 +115,9 @@ DXVK_HUD=drawcalls,submissions,pipelines,descriptors,compiler
 
 - **drawcalls / submissions**: a spike here points at CPU-side translation or game engine overhead, not the GPU.
 - **pipelines / compiler**: active compilation means you are watching shader cost, not steady-state rendering.
-- `VKD3D_PROFILE_PATH` enables VKD3D-Proton's profiling output; see its repository documentation for the exact format and analysis tooling.
+- `VKD3D_PROFILE_PATH` enables VKD3D-Proton's profiling output in profiling-enabled builds; see its repository documentation for the exact format and analysis tooling.
 
-Version floors matter: the research brief records DXVK 3.x requiring Vulkan 1.4, while VKD3D-Proton needs Vulkan 1.3 plus descriptor indexing, robustness2 and push descriptors. If a game fails only on one wrapper build, check the driver's exposed Vulkan version first.
+Version floors matter: DXVK 3.x requires Vulkan 1.4; VKD3D-Proton needs Vulkan 1.3 plus descriptor indexing with at least 1,000,000 UpdateAfterBind descriptors, `VK_EXT_robustness2`, and `VK_KHR_push_descriptor`. If a game fails only on one wrapper build, check the driver's exposed Vulkan version and features first.
 
 ## 13.6 Stage 4: The GPU and its driver
 
@@ -139,8 +139,8 @@ Relevant levers from the brief:
 
 | Lever | Effect |
 |---|---|
-| DXVK 3.x `dxbc-spirv` | Reported to save roughly 1 GiB of RAM by changing how shaders are handled |
-| `VKD3D_CONFIG=no_upload_hvv` | Avoids one upload-heavy path in some D3D12 workloads |
+| DXVK 3.x `dxbc-spirv` | Saves around 1 GiB of system memory in some games (e.g. Overwatch, God of War) |
+| `VKD3D_CONFIG=no_upload_hvv` | Avoids one upload-heavy path in some D3D12 workloads; may free VRAM at the cost of lower GPU performance |
 | `DXVK_SHADER_CACHE_PATH` | Moves the DXVK cache, useful when the prefix disk is small |
 
 Do not confuse system RAM pressure with VRAM pressure. On Android, "memory" also includes pressure from the compositor and other apps; the kernel may reclaim pages and hurt the game even when the game itself is well behaved.
@@ -162,16 +162,16 @@ MangoHud can display `cpu_temp`, `gpu_temp`, `throttling_status` and `battery_wa
 | Tool | Layer | First command / hook |
 |---|---|---|
 | DXVK HUD | Graphics + memory + compile | `DXVK_HUD=devinfo,fps,frametimes,drawcalls,pipelines,compiler,memory` |
-| MangoHud | Whole-system overlay | `mangohud %command%`; add `gpu_stats,cpu_temp,1%lows` |
+| MangoHud | Whole-system overlay | `mangohud %command%`; for 1% lows use `MANGOHUD_CONFIG=gpu_stats,cpu_temp,fps_metrics=avg+0.01` (or escape the comma: `fps_metrics=avg\,0.01`) |
 | VKD3D-Proton profiling | D3D12 translation | `VKD3D_PROFILE_PATH=/path` |
 | Box64 stats | ISA translation | `BOX64_DYNAREC_PERFMAP=1`, `BOX64_DYNAREC_TRACE` |
 | FEX stats | ISA translation | `ProfileStats` config key |
 | `perf` | Host CPU | `perf record`/`perf report` on Linux; pair with translator maps |
 | Android `dumpsys` | Android framework | `adb shell dumpsys gfxinfo <PKG> framestats` |
 | Perfetto | Whole-device tracing | https://perfetto.dev/ |
-| Simpleperf | Android CPU sampling | https://android.googlesource.com/platform/system/extras/+/master/simpleperf/ |
+| Simpleperf | Android CPU sampling | https://developer.android.com/ndk/guides/simpleperf |
 
-Official references: [MangoHud](https://github.com/flightlessmango/MangoHud), [Vulkan Loader debugging](https://github.com/KhronosGroup/Vulkan-Loader/blob/main/docs/LoaderDebugging.md), [Android dumpsys](https://developer.android.com/tools/dumpsys), [Android performance measurement](https://developer.android.com/topic/performance/measuring-performance).
+Official references: [MangoHud](https://github.com/flightlessmango/MangoHud), [Vulkan Loader debugging](https://github.com/KhronosGroup/Vulkan-Loader/blob/main/docs/LoaderDebugging.md), [Android dumpsys](https://developer.android.com/tools/dumpsys), [Android performance measurement](https://developer.android.com/topic/performance/measuring-performance). `VK_LOADER_DEBUG` is a desktop-loader facility and does not work with Android's loader.
 
 A disciplined measurement session records: kernel version, driver version, Wine/Proton version, translator version, wrapper version, resolution, and whether the cache was warm. Without those, two runs are not comparable.
 
@@ -184,14 +184,14 @@ Modern D3D games do not ship ready-to-run GPU machine code. They ship shaders in
 | DXVK 2.x+ | Graphics Pipeline Library (`VK_EXT_graphics_pipeline_library`) | Reduces compile stutter; games that preload shaders in menus still stall. Watch with `DXVK_HUD=compiler` |
 | DXVK 3.x | `dxbc-spirv` plus `DXVK_SHADER_CACHE_PATH` | Default cache location is under AppData/Local in the prefix; the legacy state cache was removed in 2.7 |
 | VKD3D-Proton | `vkd3d-proton.cache` in the working directory; `VKD3D_SHADER_CACHE_PATH` | `VKD3D_CONFIG=pipeline_library_app_cache` relates to app-managed pipeline caches |
-| Mesa | `MESA_SHADER_CACHE_DIR`, `MESA_SHADER_CACHE_MAX_SIZE` (default 1 GiB) | `MESA_DISK_CACHE_SINGLE_FILE=1` uses a Fossilize database |
+| Mesa | `MESA_SHADER_CACHE_DIR`, `MESA_SHADER_CACHE_MAX_SIZE` (default 1 GiB) | `MESA_DISK_CACHE_SINGLE_FILE=1` uses a Fossilize database, which ignores the size cap |
 | Fossilize | `VK_LAYER_fossilize`, `.foz` files, `fossilize-replay` | Records and replays Vulkan pipelines for reproducible warm-up |
 
 [Fossilize](https://github.com/ValveSoftware/Fossilize) is a Vulkan pipeline caching and replay tool from Valve, not a game-level settings panel.
 
 ### About `DXVK_ASYNC`
 
-There is **no official `DXVK_ASYNC`** build in the upstream DXVK project. `dxvk-async` was an archived third-party patch; its successor is the third-party `dxvk-gplasync` fork. `[NEEDS VERIFICATION]`: the exact current repository URL for `dxvk-gplasync` was not confirmed by the collected primary sources, so this book does not link one. These forks trade correctness for fewer compile stalls and are not safe for online games; changing rendering behaviour in multiplayer can violate anti-cheat rules (see module 15). Prefer warming caches through normal gameplay.
+There is **no official `DXVK_ASYNC`** build in the upstream DXVK project. `dxvk-async` was an archived third-party patch; its successor is [dxvk-gplasync](https://gitlab.com/Ph42oN/dxvk-gplasync), another third-party fork (the original `Sporif/dxvk-async` repo is archived). dxvk-gplasync is not upstream, and its project warns about anti-cheat risk. These forks trade correctness for fewer compile stalls and are not safe for online games; changing rendering behaviour in multiplayer can violate anti-cheat rules (see module 15). Prefer warming caches through normal gameplay.
 
 ## 13.12 Upscaling and frame generation
 
@@ -202,7 +202,7 @@ There is **no official `DXVK_ASYNC`** build in the upstream DXVK project. `dxvk-
 | FSR1 | Spatial upscaler | Can be applied externally by [gamescope](https://github.com/ValveSoftware/gamescope) with `-F fsr`; also NIS and SGSR |
 | FSR2 / FSR3 | Temporal upscalers | Need engine integration; use game settings where available |
 | FSR3 frame generation | Frame generation | Increases queued frames and latency; does not fix a CPU-bound translated game |
-| FSR4 / 4.1.2 | ML-based upscaling | Per the brief, limited to RX 9000/7000/6000 and selected Ryzen AI; otherwise falls back to FSR3/2 analytical paths. `[NEEDS VERIFICATION]` for exact hardware list — confirm against [AMD's FSR documentation](https://gpuopen.com/amd-fsr-sdk/) for your driver version |
+| AMD FSR Upscaling 4.1.2 (formerly "FSR 4") | ML-based upscaling | RX 9000/7000/6000 and supported Ryzen AI APUs; otherwise [AMD's FSR API](https://gpuopen.com/amd-fsr-sdk/) selects FSR 3.1.6 analytical (the SDK also bundles FSR 2.3.4). Requires engine-integrated signed DLLs and D3D12 or Vulkan 1.2; new APU/Vulkan paths need Adrenalin 26.10.1+. Not a gamescope-style external filter. |
 | [vkBasalt](https://github.com/DadSchoorse/vkBasalt) | Vulkan post-process layer | Can apply FSR1/CAS where engine support is absent |
 
 Frame generation is not free performance. It adds latency and can look worse when the underlying frame rate is already unstable — which is common under ISA translation. If your real frame time is 40 ms, generating extra frames does not make the game respond faster. Fix the bottleneck first.
@@ -239,7 +239,7 @@ Change **one** variable between measurements. Module 14 expands this into a full
 ## 13.15 What to remember
 
 - Measure frame time and 1% lows, not average FPS alone.
-- Identify the saturated layer before changing settings; the layers are ISA translation, Wine API/sync, graphics translation, GPU, memory, storage/cache and thermal.
+- Identify the saturated layer before changing settings; the layers are ISA translation, Wine API/sync, graphics translation, GPU, memory, storage/cache, and thermal.
 - FEX/Box64 translate CPU instructions; DXVK/VKD3D translate graphics APIs; Wine/Proton provide Windows API compatibility; Turnip is a GPU driver.
 - On ARM hosts, CPU translation and synchronisation are often the ceiling even when the GPU is idle.
 - Shader caches are normal: the first run is slow, and driver changes invalidate caches.
@@ -258,7 +258,7 @@ Next: [14 — Troubleshooting](14-troubleshooting.md).
 - Box86 — https://github.com/ptitSeb/box86
 - DXVK — https://github.com/doitsujin/dxvk
 - VKD3D-Proton — https://github.com/HansKristian-Work/vkd3d-proton
-- D8VK — https://github.com/AlpyneDreams/d8vk ; D7VK — https://github.com/WinterSnowfall/d7vk
+- D8VK — https://github.com/AlpyneDreams/d8vk (merged into DXVK 2.4; standalone build discontinued) ; D7VK — https://github.com/WinterSnowfall/d7vk
 - Mesa environment variables — https://docs.mesa3d.org/envvars.html ; Freedreno/Turnip — https://docs.mesa3d.org/drivers/freedreno.html ; Zink — https://docs.mesa3d.org/drivers/zink.html
 - ntsync kernel docs — https://docs.kernel.org/userspace-api/ntsync.html ; Debian HOWTO — https://wiki.debian.org/Wine/NtsyncHowto
 - MangoHud — https://github.com/flightlessmango/MangoHud
@@ -268,4 +268,7 @@ Next: [14 — Troubleshooting](14-troubleshooting.md).
 - vkBasalt — https://github.com/DadSchoorse/vkBasalt
 - AMD FSR — https://gpuopen.com/amd-fsr-sdk/
 - Android dumpsys — https://developer.android.com/tools/dumpsys ; performance measurement — https://developer.android.com/topic/performance/measuring-performance
-- Perfetto — https://perfetto.dev/ ; Simpleperf — https://android.googlesource.com/platform/system/extras/+/master/simpleperf/
+- Perfetto — https://perfetto.dev/ ; Simpleperf — https://developer.android.com/ndk/guides/simpleperf
+- dxvk-gplasync — https://gitlab.com/Ph42oN/dxvk-gplasync
+- MangoHud config — https://github.com/flightlessmango/MangoHud/blob/master/data/MangoHud.conf
+- AMD FSR upscaling — https://gpuopen.com/amd-fsr-upscaling ; FSR SDK manual — https://gpuopen.com/manuals/fsr_sdk/techniques/super-resolution-ml/
