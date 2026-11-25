@@ -182,7 +182,7 @@ For a pre-2006 game:
 4. D3D7: D7VK or dgVoodoo2 → D3D11 → DXVK.
 5. D3D8: DXVK d3d8+d3d9 or D3D8to9 → DXVK.
 6. D3D9: DXVK or WineD3D.
-7. Cap FPS at 60.
+7. Cap FPS at a stable rate (30–60 for old D3D games).
 8. See module 06 for IGI 1 walkthrough.
 
 ## 16.10 What to remember

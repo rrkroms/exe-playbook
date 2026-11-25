@@ -89,7 +89,7 @@ Use your own legally acquired copy. This lab provides no game files, cracks or k
    - **Vulkan 1.1/1.2 or mobile GPU** → DXVK-Sarek with its x86-only DDraw/D7VK module.
    - **Need dgVoodoo2 features** → dgVoodoo2 v2.87.6 local DLLs → D3D11 FL10.1 → DXVK `d3d11.dll`/`dxgi.dll`. Never stack D7VK and dgVoodoo2 DDraw in one process.
 6. Install only needed runtimes (VC++ from your installer; DirectX 7/8-era components if a launcher demands them).
-7. Cap FPS at 60. Old D3D games break at high refresh rates.
+7. Cap FPS at a stable rate (30–60 for old D3D games). Old D3D games break at high refresh rates.
 8. Launch and capture logs if it fails.
 
 ### Common failures

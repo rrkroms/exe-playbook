@@ -116,7 +116,7 @@ export WINEDLLOVERRIDES="d3d9=n,dxgi=n"
 export WINEDLLOVERRIDES="dinput8=b"
 ```
 
-The same choice can be made persistently in `winecfg` (Libraries tab). For [DXVK](https://github.com/doitsujin/dxvk), the usual install step is to copy the x64 DLLs into `system32` and the x32 DLLs into `syswow64`, then override `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` as needed. [VKD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) supplies the D3D12 path. Legacy D3D7/8 games may instead use [D7VK](https://github.com/WinterSnowfall/d7vk), [D8VK](https://github.com/AlpyneDreams/d8vk), D3D8to9, or WineD3D — the override list must match the translator you actually installed.
+The same choice can be made persistently in `winecfg` (Libraries tab). For [DXVK](https://github.com/doitsujin/dxvk), the usual install step is to copy the x64 DLLs into `system32` and the x32 DLLs into `syswow64`, then override `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` as needed. [VKD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) supplies the D3D12 path. Legacy D3D7/8 games may instead use [D7VK](https://github.com/WinterSnowfall/d7vk), DXVK's D3D8 path (merged D8VK), [D3D8to9](https://github.com/crosire/d3d8to9) + DXVK, or WineD3D — the override list must match the translator you actually installed.
 
 A wrong override is one of the most common self-inflicted failures: forcing a native DLL that is missing, 16-bit, or from the wrong Windows version will break a game that worked with the built-in. Add overrides one at a time and read `WINEDEBUG=+loaddll` output.
 
@@ -136,7 +136,7 @@ Windows games assume runtimes are present system-wide. Wine does not ship every 
 
 [winetricks](https://github.com/Winetricks/winetricks) automates most installs: `winetricks vcrun2022 dotnet48 d3dx9 xaudio2_7`. On Debian it is packaged as `winetricks` (contrib). Run winetricks with the same `WINEPREFIX` as the game, and keep the downloads it fetches — reinstalling into a fresh prefix is a normal rollback step.
 
-Do not install everything “just in case”. Each install changes the registry and can overwrite DLLs. .NET/WPF is a known weak spot in Proton; Media Foundation is incomplete, with VP9/AV1 preferred, and Proton offers workarounds such as `nomfdxgiman`. Install what the error message or log asks for.
+Do not install everything “just in case”. Each install changes the registry and can overwrite DLLs. .NET/WPF is a known weak spot in Proton; Media Foundation is incomplete; Valve recommends standalone VP9/AV1 to reduce bandwidth and disk use, and Proton offers workarounds such as `nomfdxgiman`. Install what the error message or log asks for.
 
 ## 8.7 Audio
 
