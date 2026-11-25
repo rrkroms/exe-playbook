@@ -21,13 +21,13 @@ These are the most useful knobs. Syntax is shown exactly where the collected sou
 
 | Knob | Accepted values / syntax | Layer | Source |
 |---|---|---|---|
-| `WINEDEBUG` | `[class][+-]channel[,...]`; classes `err`, `warn`, `fixme`, `trace` | Wine APIs | Wine |
+| `WINEDEBUG` | `[[process:]class][+-]channel[,...]`; classes: `err`, `warn`, `fixme`, `trace` | Wine APIs | Wine |
 | `DXVK_LOG_LEVEL` | `none`, `error`, `warn`, `info`, `debug` | D3D9–11 translation | DXVK |
 | `DXVK_DEBUG` | `capture`, `hang`, `markers`, `validation` | DXVK internals | DXVK |
 | `VKD3D_DEBUG` | `none`, `err`, `info`, `fixme`, `warn`, `trace` | D3D12 translation | VKD3D-Proton |
 | `VK_LOADER_DEBUG` | `error,warn,info,debug,layer,driver,all` | Vulkan loader (desktop only) | Khronos |
 | `MESA_DEBUG` | `silent`, `flush`, `incomplete_tex`, `incomplete_fbo`, `context` | Mesa GL | Mesa |
-| `TU_DEBUG` | `sysmem`, `gmem`, `nobin`, `forcebin`, `noubwc`, `nolrz`, `flushall`, `syncdraw`, `rast_order`, `rd` | Turnip Vulkan driver | Mesa |
+| `TU_DEBUG` | Common diagnostic subset (not exhaustive): `sysmem`, `gmem`, `nobin`, `forcebin`, `noubwc`, `nolrz`, `flushall`, `syncdraw`, `rast_order`, `rd` | Turnip Vulkan driver | Mesa |
 | `TU_DEBUG_FILE` | Runtime toggle file for `TU_DEBUG` | Turnip | Mesa |
 | `ZINK_DEBUG` | `nir`, `spirv`, `tgsi`, `validation`, `sync`, … | Zink GL-on-Vulkan | Mesa |
 | `ZINK_DESCRIPTORS` | `auto`, `lazy`, `db` | Zink | Mesa |
@@ -61,7 +61,7 @@ A common beginner mistake is to read `fixme:` lines as errors. Many games print 
 
 DXVK's `DXVK_LOG_LEVEL=debug` plus `DXVK_DEBUG` modes are your first stop for D3D9/10/11 failures. `validation` surfaces API misuse, `hang` helps when the game freezes, `capture` and `markers` are for deeper tracing.
 
-For D3D12, use `VKD3D_DEBUG=warn` or `trace`, and `VKD3D_PROFILE_PATH` to write profiling data as described in module 13.
+For D3D12, use `VKD3D_DEBUG=warn` or `VKD3D_DEBUG=trace`. `VKD3D_PROFILE_PATH` writes profiling data only in a VKD3D-Proton build configured with `-Denable_profiling=true` (as noted in module 13); a stock build ignores it.
 
 If the game crashes at graphics initialisation, check the driver side too: a translator may report a Vulkan error that is actually a driver bug exposed by a specific feature.
 
@@ -78,11 +78,11 @@ Important limitation: `VK_LOADER_DEBUG` is a **desktop** debugging facility. On 
 
 Mesa-side knobs are covered in the [Mesa environment variable reference](https://docs.mesa3d.org/envvars.html). Two driver-specific examples:
 
-- `TU_DEBUG=sysmem,nolrz,flushall` is one example flag set to try for suspected Turnip/GMEM or LRZ device-lost cases [NEEDS VERIFICATION — treat as a diagnostic experiment, not a documented recommendation].
-- `ZINK_DEBUG=validation` validates Zink's OpenGL-on-Vulkan path; `ZINK_DESCRIPTORS=db` changes descriptor handling.
-- D7VK 1.2+ uses its own `D7VK_LOG_LEVEL` and `D7VK_LOG_PATH` rather than the DXVK variables; check the bundled D7VK version before choosing a log knob.
+- `TU_DEBUG=sysmem,nolrz,flushall` is a documented example for narrowing down suspected Turnip GMEM/LRZ device-lost cases; treat it as a diagnostic experiment, not a recommendation.
+- `ZINK_DEBUG=validation` dumps Vulkan validation-layer output; Zink requests `VK_LAYER_KHRONOS_validation` itself when that layer is installed and discoverable. `ZINK_DESCRIPTORS=db` changes descriptor handling.
+- D7VK v1.3+ uses `D7VK_LOG_LEVEL` and `D7VK_LOG_PATH`; v1.2 and earlier still use the DXVK variables. Check the bundled D7VK version before choosing a log knob.
 
-On Android, Mesa maps `TU_DEBUG` to system properties; whether a property is writable without root depends on whether it uses the `debug.*` or `vendor.*` namespace [NEEDS VERIFICATION — this mapping is documented by Mesa but exact property visibility is device-dependent]. See module 07 for driver selection details.
+On Android, Mesa maps environment-variable names to system properties in the order `debug.*`, `vendor.*`, then the bare name; `debug.*` works without root, while `vendor.*` requires root ([Mesa Android System Properties](https://docs.mesa3d.org/android.html)). The exact property name for a given option is inferred from that generic mapping. See module 07 for driver selection details.
 
 ## 14.6 Reading CPU translator logs
 
@@ -95,13 +95,13 @@ BOX64_DYNAREC_PERFMAP=1 game.exe    # emit a map for perf
 
 Use these when a crash only happens under translation, or when one core is pegged. `BOX64_LOG` levels run 0–3; higher is noisier.
 
-FEX uses a configuration model rather than a single log-level variable. The documented keys include `Logging.SilentLog`, `Logging.OutputLog` and `Logging.ProfileStats`; environment overrides generally follow `FEX_` plus the uppercase key. `[NEEDS VERIFICATION]`: the research brief explicitly flags `FEX_LOG_LEVEL` as **not** present in the current config schema; check the [FEX repository](https://github.com/FEX-Emu/FEX) documentation for your build rather than copying that variable from forum posts.
+FEX uses a configuration model rather than a single log-level variable. The documented keys include `Logging.SilentLog`, `Logging.OutputLog` and `Logging.ProfileStats`; each becomes an environment override of the form `FEX_` plus the uppercase key (for example `FEX_PROFILESTATS=1`). `FEX_LOG_LEVEL` is not a generated env var in the current config schema; check the [FEX repository](https://github.com/FEX-Emu/FEX) documentation for your build rather than copying that variable from forum posts.
 
 Remember what these tools do: Box64 and FEX translate **CPU instructions**. They cannot tell you why a shader failed to compile.
 
 ## 14.7 Debuggers
 
-[winedbg](https://wiki.winehq.org/Winedbg) is Wine's debugger. Useful commands include `info process`, `info thread`, `info wnd` and `info exception`. Wine's GDB mode, with Wine symbols installed, is useful when you need to inspect a native crash.
+[winedbg](https://wiki.winehq.org/Winedbg) is Wine's debugger. Useful commands include `info process`, `info thread`, `info wnd` and `info exception`. With Wine symbols installed, Wine's GDB proxy mode (`winedbg --gdb`) is useful when you need to inspect a native crash.
 
 For driver-level or host crashes, standard Linux tools apply: `gdb`, `perf`, `dmesg` and `strace`. On Android, use `adb logcat`, tombstone files and kernel logs where accessible.
 
@@ -152,7 +152,7 @@ Do not report a bug to the DXVK project when the log shows a Wine loader failure
 
 After a driver, Wine or wrapper update, behaviour can change because old caches are invalid. Symptoms include new artifacts, new stutter and occasional crashes. Clear the relevant caches and accept a slow first run. Cache locations are listed in module 13: DXVK, VKD3D-Proton, Mesa/Fossilize and Proton crash reports.
 
-Driver rollback is legitimate diagnosis. If a game worked on driver version A and fails on version B, reinstalling A confirms the regression. Do not mix driver userspace components from different versions; the loader, ICD and Mesa libraries must match the driver stack. On Android, per-app Turnip injection is safer than replacing the system driver used by SurfaceFlinger — a bad system-wide driver can break the whole UI.
+Driver rollback is legitimate diagnosis. If a game worked on driver version A and fails on version B, reinstalling A confirms the regression. Prefer a consistent driver userspace stack (loader, ICD and Mesa libraries) from one version; mixing versions can cause hard-to-diagnose failures. On Android, per-app Turnip injection is safer than replacing the system driver used by SurfaceFlinger — a bad system-wide driver can break the whole UI.
 
 ## 14.11 Android-specific diagnostics
 
@@ -166,7 +166,7 @@ Android shares the Linux kernel with desktop Linux but has a different userspace
 | Simpleperf | CPU sampling of native code |
 | Tombstone files | Native process crash backtraces |
 | Kernel logs (`dmesg`, where readable) | Driver and OOM messages |
-| Android GPU inspector tools | GPU trace where supported `[NEEDS VERIFICATION]` for availability on your device |
+| [Android GPU Inspector (AGI)](https://developer.android.com/agi) | GPU counter and frame profiling where supported (Adreno, Mali, PowerVR); device validation required; Android 12+ expected; no emulators |
 
 Specific Android failure patterns:
 
@@ -180,7 +180,7 @@ Specific Android failure patterns:
 
 Symptom: D3D12 game launches, shows a menu, then the device is lost on entering gameplay.
 
-1. Record versions: kernel 6.14, Mesa/Turnip build, VKD3D-Proton 3.1, Proton 11.0.
+1. Record versions (example values): kernel 6.14, Mesa/Turnip build, VKD3D-Proton 3.1, Proton 11.0.
 2. Run with `VKD3D_DEBUG=warn` and capture stderr to a file.
 3. Check the Android log or `dmesg` for driver messages at the same timestamp.
 4. Try `vulkaninfo --summary` (desktop) or verify injected driver selection (Android) to confirm which ICD is active.
@@ -214,4 +214,6 @@ Next: [15 — Compatibility, Online Games and DRM](15-compatibility-online-drm.m
 - Mesa environment variables — https://docs.mesa3d.org/envvars.html ; Zink — https://docs.mesa3d.org/drivers/zink.html ; Freedreno/Turnip — https://docs.mesa3d.org/drivers/freedreno.html
 - Vulkan Loader debugging — https://github.com/KhronosGroup/Vulkan-Loader/blob/main/docs/LoaderDebugging.md ; Vulkan Tools (`vulkaninfo`) — https://github.com/KhronosGroup/Vulkan-Tools
 - Android `logcat` — https://developer.android.com/tools/logcat ; `dumpsys` — https://developer.android.com/tools/dumpsys ; `adb` — https://developer.android.com/tools/adb
-- Perfetto — https://perfetto.dev/ ; Simpleperf — https://android.googlesource.com/platform/system/extras/+/master/simpleperf/
+- Perfetto — https://perfetto.dev/ ; Simpleperf — https://developer.android.com/ndk/guides/simpleperf
+- Mesa Android System Properties — https://docs.mesa3d.org/android.html
+- Android GPU Inspector — https://developer.android.com/agi ; supported devices — https://developer.android.com/agi/supported-devices
