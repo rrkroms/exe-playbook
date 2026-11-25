@@ -57,7 +57,7 @@ Mitigations, least to most invasive. The `adb` commands use the [Android Debug B
    adb shell device_config put activity_manager max_phantom_processes 2147483647
    ```
 
-[NEEDS VERIFICATION — these switches are widely reported in the community, but names and availability vary by device and Android build; check `adb shell settings list global` on your device.]
+[The AOSP keys exist, but OEM builds may hide or rename the developer option; the adb/device_config commands are community-documented, not officially supported. Verify with `adb shell settings list global`.]
 
 Then, in Termux:
 
@@ -107,7 +107,7 @@ export DISPLAY=:1
 
 You can omit `-xstartup` and let Wine create windows on an empty root window. [XServer XSDL](https://github.com/pelya/xserver-xsdl) is an older alternative but has no GL acceleration, so it is unsuitable for translated 3D.
 
-**Audio.** Wine implements Windows audio APIs (XAudio2, DirectSound, WASAPI) and forwards them to a host audio server ([module 08 §8.7](08-runtime-prefixes.md)). In Termux that server is [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) (a [PipeWire](https://pipewire.org/)-pulse setup is a common alternative [NEEDS VERIFICATION — device-dependent]). Inside the guest, set:
+**Audio.** Wine implements Windows audio APIs (XAudio2, DirectSound, WASAPI) and forwards them to a host audio server ([module 08 §8.7](08-runtime-prefixes.md)). In Termux that server is the Termux-patched [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) with AAudio/OpenSL ES sinks, started in TCP mode on the host; [PipeWire](https://pipewire.org/) is packaged but `pipewire-pulse` is not a drop-in replacement (no Android sinks; open upstream issue). Verify sinks with `pactl list short sinks`. Inside the guest, set:
 
 ```sh
 export PULSE_SERVER=127.0.0.1
@@ -165,7 +165,7 @@ FEXRootFSFetcher
 
 FEX stores its rootfs under `$HOME/.fex-emu/RootFS/` and reads configuration from `$HOME/.fex-emu/Config.json` ([FEX configuration wiki](https://wiki.fex-emu.com/index.php/Development:Configuration)). Set `FEX_ROOTFS` if you use a non-default location.
 
-[NEEDS VERIFICATION — piping a remote script into `python3` is a supply-chain risk; download and read `InstallFEX.py` before running it.]
+[Piping a remote script into `python3` is a supply-chain risk; the [FEX README](https://github.com/FEX-Emu/FEX/blob/main/Readme.md) itself shows only the pipe-to-python command. Download and read `InstallFEX.py` before running it: use `curl -O <URL>`, inspect it, then run `python3 InstallFEX.py`.]
 
 ### Box64 (fallback, and for x86-64 Wine)
 
@@ -203,7 +203,7 @@ Use an **absolute** path. `VK_ICD_FILENAMES` is a deprecated alias; `VK_ADD_DRIV
 
 **Why `VK_DRIVER_FILES` works here but not in a native Android app.** Inside Termux/proot, Wine is a Linux ELF process using the desktop [Vulkan loader](https://github.com/KhronosGroup/Vulkan-Loader) ([loader docs](https://docs.vulkan.org/guide/latest/loader.html)), which discovers drivers through ICD manifests. A native Android app instead uses Android's platform Vulkan library and `VK_KHR_android_surface`, and gets its driver from the system; ICD-file overrides do not apply there — per-app injection is the route (module 07). This distinction is why a frontend's Turnip picker and your Termux `VK_DRIVER_FILES` are different mechanisms.
 
-Turnip supports Adreno 6xx/7xx/8xx (Vulkan 1.3 on A6xx, 1.4 on A7xx; no A5xx). [Freedreno](https://docs.mesa3d.org/drivers/freedreno.html) supplies OpenGL/OpenGL ES; [Zink](https://docs.mesa3d.org/drivers/zink.html) implements OpenGL on top of Vulkan. [NEEDS VERIFICATION — the supplied briefs disagree on the exact maximum desktop GL version (4.5 vs 4.6); check `glxinfo` on your Mesa build.] Keep the stock Qualcomm driver for Android's UI and use Turnip only in this guest; `/dev/kgsl-3d0` must be accessible, but no root is required. Wrapping the extracted Qualcomm system driver as an ICD has been reported to fail — use the generic loader plus Turnip. Direct3D 12 through VKD3D-Proton is the least reliable tier on this stack.
+Turnip supports Adreno 6xx/7xx/8xx (Vulkan 1.3 on A6xx, 1.4 on A7xx; no A5xx). [Freedreno](https://docs.mesa3d.org/drivers/freedreno.html) supplies OpenGL/OpenGL ES; [Zink](https://docs.mesa3d.org/drivers/zink.html) implements OpenGL on top of Vulkan. Mesa documents Freedreno at desktop OpenGL 4.5 / GLES 3.2; Mesa core implements the 4.6 API but per-driver support varies — check `glxinfo` on your build. Keep the stock Qualcomm driver for Android's UI and use Turnip only in this guest; `/dev/kgsl-3d0` must be accessible, but no root is required. Wrapping the extracted Qualcomm system driver as an ICD has been reported to fail — use the generic loader plus Turnip. Direct3D 12 through VKD3D-Proton is the least reliable tier on this stack.
 
 For Adreno 730 specifics — stable Mesa builds, plain “A6xx/A7xx Standard” variants, and the “do not apply the A740 UBWC hint” rule — see [module 09 §9.5](09-android-frontends.md).
 
@@ -229,7 +229,7 @@ Build [VKD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) from sou
 ./package-release.sh master /target --no-package
 ```
 
-It requires a DXVK 2.1+ DXGI to coexist with; D3D12 is the least mature path on Adreno, so test D3D9/D3D11 first.
+It needs DXVK 2.1+ DXGI alongside it; D3D12 is the least mature path on Adreno, so test D3D9/D3D11 first.
 
 ### Legacy D3D7/8/9 (module 06)
 
@@ -242,7 +242,7 @@ Not every old game fits DXVK:
 | Direct3D 7 / DirectDraw | [D7VK](https://github.com/WinterSnowfall/d7vk), WineD3D, or a DirectDraw wrapper |
 | OpenGL (Windows game) | Freedreno native GL, or Zink |
 
-[WineD3D](https://gitlab.winehq.org/wine/wine) is Wine's built-in Direct3D-to-OpenGL implementation; it is the fallback when a Vulkan path is unavailable but generally older and slower than DXVK. [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) is **not** part of this pipeline — its author disclaims Wine/Linux support, so do not copy Windows dgVoodoo2 recipes into a Termux prefix.
+[WineD3D](https://gitlab.winehq.org/wine/wine) is Wine's built-in Direct3D-to-OpenGL implementation; it is the fallback when a Vulkan path is unavailable, though it is generally older and slower than DXVK. [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) is **not** part of this pipeline — its author disclaims Wine/Linux support, so do not copy Windows dgVoodoo2 recipes into a Termux prefix.
 
 ## 10.11 Environment variables reference
 
@@ -251,7 +251,7 @@ Not every old game fits DXVK:
 | `DISPLAY=:1` | X11 display served by Termux:X11 |
 | `PULSE_SERVER=127.0.0.1` | PulseAudio server address inside proot |
 | `WINEPREFIX` | Absolute path to the Wine prefix |
-| `WINEARCH=win32` | Only for a pure 32-bit prefix — do not set for a 64-bit prefix |
+| `WINEARCH=win32` | Deprecated and unsupported under Wine 11.0's new WoW64; use only with older Wine or a legacy wrapper needing a pure 32-bit prefix |
 | `WINEDLLOVERRIDES` | Built-in vs native DLL choice, e.g. `d3d9=n,dxgi=n` |
 | `VK_DRIVER_FILES` | Absolute path to the Turnip ICD JSON manifest |
 | `VK_LOADER_DEBUG=all` | Verbose Vulkan loader diagnostics |
@@ -324,7 +324,7 @@ WINEDLLOVERRIDES="d3d11=n,dxgi=n" wine d3d11-test.exe
 | big.LITTLE scheduling | Translator threads land on slow cores | `BOX64_SKIPCPU` / `BOX64_MAXCPU` to restrict cores, or set affinity |
 | Thermal limits | Sustained FPS falls after minutes; battery health degrades | Cap FPS, lower resolution, accept a stable 30 FPS |
 | Shader compilation | First run stutters; driver/translator updates invalidate caches | Warm up shaders; do not mistake first-launch stutter for a regression |
-| 16 KB pages (Android 15+) | Prebuilt `.so` files built for 4 KB pages may not load; [NDK](https://developer.android.com/ndk) r28+ / `max-page-size` flags needed | [NEEDS VERIFICATION — real impact on these prebuilt libraries is unconfirmed; verify on your device] |
+| 16 KB pages (Android 15+) | Packaged NDK `.so` files need 16 KB ELF alignment (NDK r28+ by default; linker flags on r27 and lower); a backcompat mode exists | Play enforcement from 2027-02-01; verify your specific libraries inside proot |
 | Off-screen throttling | Rendering slows when the screen is off | Keep Termux:X11 in the same app family; wake lock keeps CPU on, not screen on |
 
 The GPU is often not the bottleneck: a game can be CPU-translation-bound with low GPU usage, or GPU-bound at high resolution. Measure before optimising (module 13).

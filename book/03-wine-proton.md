@@ -95,9 +95,9 @@ Three environment variables control the basics:
 > **Important — do not call WoW64 a CPU translator or an emulator.**
 > WoW64 changes *how a 32-bit program calls a 64-bit API*. It does not decode or recompile instructions. On an x86-64 host, the CPU executes 32-bit x86 code natively. On an ARM64 host, WoW64 solves only the 32-bit-to-64-bit API problem; the x86 or x86-64 instructions still require a CPU translator such as FEX or Box64 (module 04).
 
-A 64-bit prefix can generally host 32-bit applications through WoW64. Use `WINEARCH=win32` only when you deliberately want a pure 32-bit prefix, for example for older games whose installers or wrappers are 32-bit-only.
+A 64-bit prefix hosts 32-bit applications through WoW64. In Wine 11.0's new WoW64 mode, pure `WINEARCH=win32` prefixes are deprecated and unsupported; run 32-bit executables inside a 64-bit prefix. `WINEARCH=wow64` only forces an existing old-style prefix into the new mode.
 
-The [Wine 11.0 announcement](https://www.winehq.org/announce/11.0) lists "New WoW64" among its supported features. On ARM64, WoW64 and [ARM64EC](https://learn.microsoft.com/en-us/windows/arm/arm64ec) support are closely related [NEEDS VERIFICATION — the available sources confirm both features exist but do not spell out the exact dependency between the new WoW64 implementation and ARM64EC thunk infrastructure; check the announcement text before relying on that relationship].
+The [Wine 11.0 announcement](https://www.winehq.org/announce/11.0) lists "New WoW64" as fully supported. Wine documents ARM64EC/ARM64X module loading (Wine 9.0) and the 32-bit x86 emulation interface separately; the announcement does **not** state that the new WoW64 mode depends on ARM64EC.
 
 ## 3.5 Built-in and native DLLs, and overrides
 

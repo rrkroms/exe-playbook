@@ -51,9 +51,9 @@ Game graphics API?
         +-- Direct3D 7 ------> D7VK (Vulkan 1.4) | dgVoodoo2->D3D11->DXVK | WineD3D
         +-- Direct3D 8 ------> DXVK (d3d8+d3d9) | D3D8to9->DXVK | dgVoodoo2 | D8VK
         +-- Direct3D 9 ------> DXVK first | WineD3D fallback | dgVoodoo2
-        +-- Direct3D 10 ----- > DXVK | WineD3D
-        +-- Direct3D 11 ----- > DXVK | WineD3D
-        +-- Direct3D 12 ----- > VKD3D-Proton
+         +-- Direct3D 10 ------> DXVK | WineD3D
+         +-- Direct3D 11 ------> DXVK | WineD3D
+         +-- Direct3D 12 ------> VKD3D-Proton
         +-- OpenGL ----------> Wine opengl32 -> host GL | Zink when no native GL
         +-- Vulkan ----------> native Vulkan (rare in Windows games)
         +-- DirectDraw ------> cnc-ddraw (2D) | DDrawCompat (Windows only) | D7VK proxy
@@ -177,7 +177,7 @@ RESULTS:
 
 For a pre-2006 game:
 1. Confirm 32-bit exe and Direct3D version (often D3D7/8/9).
-2. Fresh prefix; use `WINEARCH=win32` only when the legacy wrapper/installer requires a pure 32-bit prefix.
+2. Fresh 64-bit prefix; in Wine 11.0's new WoW64 mode, pure `WINEARCH=win32` prefixes are deprecated and unsupported, so use one only with older Wine or a wrapper that requires it.
 3. Windows 7, then XP SP3 if needed.
 4. D3D7: D7VK or dgVoodoo2 → D3D11 → DXVK.
 5. D3D8: DXVK d3d8+d3d9 or D3D8to9 → DXVK.

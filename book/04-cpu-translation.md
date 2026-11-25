@@ -193,7 +193,7 @@ A **page** is the unit of memory that the OS maps and protects. Linux desktops c
 | Most ARM64 Linux and Android | 4K | No issue |
 | Asahi Linux (Apple Silicon) | 16K | Wine ARM64EC unsupported; needs a 4K environment |
 | Some Snapdragon configurations | 16K | Same class of problem |
-| Android 15+ devices with 16KB pages | 16K | Native libraries need NDK r28+ / `max-page-size` flags; impact on prebuilt `.so` files is [NEEDS VERIFICATION — the brief flags this as unverified] ([Android page-size docs](https://developer.android.com/guide/practices/page-sizes)) |
+| Android 15+ devices with 16KB pages | 16K | NDK r28+ compiles 16 KB-aligned by default; older NDKs need `-Wl,-z,max-page-size=16384`. Prebuilt `.so` files must be rebuilt or realigned; Play enforcement starts 2027-02-01 ([Android page-size docs](https://developer.android.com/guide/practices/page-sizes)) |
 
 ### What muvm does — and does not do
 

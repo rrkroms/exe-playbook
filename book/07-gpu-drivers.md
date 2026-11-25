@@ -98,7 +98,7 @@ vulkaninfo --summary
 
 Two important behaviours:
 
-1. The loader ignores these variables for elevated/setuid processes. If selection “does nothing” under `sudo` or a privileged helper, that is expected, not a driver bug. [NEEDS VERIFICATION — the exact elevated-process policy is loader-version dependent; no primary text in the brief beyond the general rule.]
+1. The loader ignores ICD and layer environment variables under elevated privileges. If selection “does nothing” under `sudo` or a privileged helper, that is expected, not a driver bug ([Khronos loader architecture](https://github.com/KhronosGroup/Vulkan-Loader/blob/main/docs/LoaderInterfaceArchitecture.md#elevated-privilege-caveats)).
 2. Android is different. A normal Android app cannot set `VK_DRIVER_FILES` to change its Vulkan driver; per-app injection is the route (§7.4).
 
 **Verify, do not assume.** [vulkaninfo](https://github.com/KhronosGroup/Vulkan-Tools) is the authoritative check:
@@ -134,12 +134,12 @@ Practical consequences:
 | Situation | Likely cause |
 |---|---|
 | Game renders but UI is fine; flicker appears only in fullscreen or on present | Runtime ICD and system compositor disagree on buffer format/compression |
-| A740 devices show flicker [NEEDS VERIFICATION — community report, no primary source in the brief] | A UBWC (Universal Bandwidth Compression) flag mismatch between injected driver and system; do **not** apply the “A740 UBWC hint” blindly. Marked community-sourced; treat as a lead, not a rule. |
+| A740 devices show UI flicker or black frames during Android compositing (community driver-maintainer reports) | A UBWC (Universal Bandwidth Compression) flag mismatch with the system driver is suspected; do **not** apply the “A740 UBWC hint” blindly. Treat as a device/firmware-specific lead, not an upstream rule. |
 | Injecting a system-wide driver breaks the launcher or banking apps | You replaced the display driver, not just the runtime driver |
 
-**Per-app injection** (no root) is the safe model: keep the vendor driver for the UI and load the alternative ICD only inside the game process, typically with a front-end or a tool such as [AdrenoTools](https://github.com/K11MCH1/AdrenoToolsDrivers/releases) [community project; NEEDS VERIFICATION for its current maintenance status]. **System-wide replacement** requires an unlocked bootloader, a remounted `/system` or `/vendor`, and fixing the library SONAME so existing callers still find it. It voids warranties and can break DRM apps; see the preface safety warning.
+**Per-app injection** (no root) is the safe model: keep the vendor driver for the UI and load the alternative ICD only inside the game process, typically with a front-end or a tool such as [AdrenoTools](https://github.com/K11MCH1/AdrenoToolsDrivers/releases) [community, not Qualcomm; actively maintained as of 2026-11-08, with 2026 releases]. **System-wide replacement** requires an unlocked bootloader, a remounted `/system` or `/vendor`, and fixing the library SONAME so existing callers still find it. It voids warranties and can break DRM apps; see the preface safety warning.
 
-sysmem and gmem are two Adreno render paths: **sysmem** renders to system memory; **gmem** uses the GPU's on-chip tile buffer. Select with `TU_DEBUG=sysmem` or `TU_DEBUG=gmem` (an autotuner also exists — [NEEDS VERIFICATION — community feature, not documented in the primary brief]). If a scene corrupts only under gmem, forcing sysmem is a standard diagnostic step, at a bandwidth cost.
+sysmem and gmem are two Adreno render paths: **sysmem** renders to system memory; **gmem** uses the GPU's on-chip tile buffer. Select with `TU_DEBUG=sysmem` or `TU_DEBUG=gmem`. Mesa also documents an official autotuner with `TU_AUTOTUNE_ALGO` (`bandwidth`, `profiled`, `profiled_imm`, `prefer_sysmem`, `prefer_gmem`) and `TU_AUTOTUNE_FLAGS` ([Freedreno docs](https://docs.mesa3d.org/drivers/freedreno.html#autotune)); the forced `TU_DEBUG` modes are separate. If a scene corrupts only under gmem, forcing sysmem is a standard diagnostic step, at a bandwidth cost.
 
 ## 7.5 Driver matrix by GPU family
 
@@ -147,7 +147,7 @@ The table below reflects a 2026-11-25 snapshot (Mesa 26.3.1; 26.2.7 was the fina
 
 | GPU family | Driver(s) | APIs | Kernel path | License | Status / limits |
 |---|---|---|---|---|---|
-| Adreno 6xx/7xx | [Freedreno GL + Turnip Vulkan](https://docs.mesa3d.org/drivers/freedreno.html) (`libvulkan_freedreno.so`) | GL 4.6 / GLES 3.2; Vulkan 1.3 A6xx, 1.4 A7xx | mainline `drm/msm`; Android KGSL (`/dev/kgsl-3d0`) | MIT | Active. No A5xx. Build choice depends on KGSL vs msm. A7xx flicker reports [NEEDS VERIFICATION — community] |
+| Adreno 6xx/7xx | [Freedreno GL + Turnip Vulkan](https://docs.mesa3d.org/drivers/freedreno.html) (`libvulkan_freedreno.so`) | GL 4.5 / GLES 3.2; Vulkan 1.3 A6xx, 1.4 A7xx | mainline `drm/msm`; Android KGSL (`/dev/kgsl-3d0`) | MIT | Active. No A5xx. Build choice depends on KGSL vs msm. Community flicker reports concern A740 (8 Gen 2) specifically, not all A7xx; no upstream Mesa warning found. |
 | Adreno (any) | [Qualcomm proprietary UMD](https://www.qualcomm.com/products/technology/gpus/adreno) | GLES 3.2, Vulkan 1.1–1.4 | vendor BSP | Proprietary | Default on devices; per-device builds. Extracted packages can crash on a different GPU |
 | Mali | [Panfrost + PanVK](https://docs.mesa3d.org/drivers/panfrost.html) | GLES 3.1 / GL 3.1; Vulkan 1.3 Bifrost/Valhall, 1.4 5th gen | `panfrost` KMD | MIT | GLES conformant on G52/G57/G610; Vulkan on G610. PanVK still gated by `PAN_I_WANT_A_BROKEN_VULKAN_DRIVER=1` outside supported parts; no Vulkan for V9 Valhall |
 | Mali (stock) | [Arm Mali DDK](https://developer.arm.com/Processors/Mali-Gpus) | GLES / Vulkan per DDK | vendor BSP | Proprietary | Stock Android driver; safest for UI |
@@ -181,9 +181,9 @@ Turnip is Mesa's Vulkan driver for Adreno, shipped as part of [Freedreno](https:
 1. Keep the stock Qualcomm driver for the Android UI; inject Turnip only into the game process.
 2. Use a stable upstream Mesa release (26.3.1 at the 2026-11-25 snapshot; 26.2.7 was the final 26.2.x maintenance release) or a community build that explicitly names its upstream commit. Winlator 11.2 uses a Mesa Turnip 26.2.0 branch build rather than stock upstream Mesa.
 3. Prefer plain “A6xx/A7xx Standard” builds over specialised variants.
-4. Do **not** copy A740-specific UBWC hints to a 730 without testing: the hint is documented for One UI / A740-gen2 UI corruption, but no primary source confirms a flicker penalty on A740 or A730 [NEEDS VERIFICATION — community report].
+4. Do **not** copy A740-specific UBWC hints to a 730 without testing: community driver builders document `FD_DEV_FEATURES=enable_tp_ubwc_flag_hint=1` for One UI / A740 UI corruption, and warn it can cause the glitch on other 8 Gen 2 firmwares. No upstream Mesa or Qualcomm confirmation exists.
 5. Avoid random re-uploaded ZIPs with no commit hash; a mislabelled build for a different Adreno generation is common.
-6. Community lists favour Turnip 26.0.0 R8 (published 2026-01-08) and Qualcomm v615.77 for A730 [NEEDS VERIFICATION — anecdotal, not a primary recommendation; newer Turnip builds exist].
+6. Community driver lists cite Turnip 26.0.0 R8 (published 2026-01-08) and Qualcomm v615.77 for A730 as anecdotal starting points, not upstream recommendations; newer community Turnip builds exist (for example v27.0.0 in November 2026).
 
 If a specific game regresses, step back one known-good build rather than chasing “latest”.
 
@@ -192,7 +192,7 @@ If a specific game regresses, step back one known-good build rather than chasing
 | Host | Recommended runtime driver | Notes |
 |---|---|---|
 | Android / Adreno | Stock Qualcomm for UI; Turnip per app for emulation | No-root per-app injection; see §7.6 |
-| Android / Mali | Stock Arm DDK | PanVK on Android is community territory [NEEDS VERIFICATION — community reports only] |
+| Android / Mali | Stock Arm DDK | PanVK is upstream Mesa and buildable for Android with the NDK; on phones the stock Arm DDK remains default and third-party injection is community territory |
 | ARM Linux / Qualcomm SoC | Freedreno + Turnip (`drm/msm`) | Snapdragon X laptops need firmware extraction |
 | ARM Linux / Mali | Panfrost + PanVK where supported | Check the exact GPU model against PanVK support |
 | ARM Linux / Raspberry Pi | V3D + V3DV | 4K pages; low GPU bandwidth limits resolution |
@@ -236,7 +236,7 @@ A general rule: confirm the driver with `vulkaninfo` *before* debugging the game
 ## 7.10 What to remember
 
 - The Vulkan loader reads ICD manifests; the ICD is the userspace driver, the KMD owns the hardware.
-- `VK_DRIVER_FILES` replaces discovery, `VK_ICD_FILENAMES` is its deprecated alias, `VK_ADD_DRIVER_FILES` adds; use absolute paths and verify with `vulkaninfo`.
+- `VK_DRIVER_FILES` replaces discovery, `VK_ICD_FILENAMES` is its deprecated alias, and `VK_ADD_DRIVER_FILES` adds; use absolute paths and verify with `vulkaninfo`.
 - On Android the game's runtime driver can differ from SurfaceFlinger/HWC's display driver; per-app injection is the safe route.
 - Choose the driver by GPU family *and* host kernel (KGSL vs `drm/msm`), and check the Vulkan version your translator requires.
 - Turnip is a real Adreno Vulkan driver; for Adreno 730, keep stock for UI, inject a commit-labelled stable build per app.

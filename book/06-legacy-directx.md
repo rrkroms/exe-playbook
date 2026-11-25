@@ -6,7 +6,7 @@ This module is about old games. Direct3D 7, 8 and 9 predate the uniform Vulkan-b
 >
 > **Wine disclaimer.** [Wine](https://gitlab.winehq.org/wine/wine) is an independent reimplementation of Windows APIs, not Microsoft Windows. It is not perfect, it is not endorsed by Microsoft, and a game failing under Wine is not evidence that the game is broken. Compatibility varies by Wine version.
 >
-> **Closed-source warning.** Several legacy wrappers, notably [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) and [nGlide](https://www.zeussoftware.com/), are closed-source freeware. Their authors may not support Wine or ARM hosts, their redistribution terms are restricted, and their GitHub repository may be archived. Treat community reports about them as anecdote, not guarantee.
+> **Closed-source warning.** Several legacy wrappers, notably [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) and [nGlide](https://www.zeussoftware.com/), are closed-source freeware. Their authors may not support Wine or ARM hosts, their redistribution terms are restricted, and their GitHub repository may be archived. Treat community reports about them as anecdotes, not guarantees.
 
 ## 6.1 What "legacy" means here
 
@@ -85,7 +85,7 @@ dgVoodoo2 is frequently recommended for legacy games, but it needs careful handl
 4. A common community setup chains dgVoodoo2 to DXVK by letting dgVoodoo2 output D3D11 and supplying DXVK's `d3d11.dll` and `dxgi.dll` underneath; neither project documents this officially.
 5. **Never** override `d3d8`/`d3d9` with DXVK while dgVoodoo's own D3D8/D3D9 DLLs are active, and never stack two DirectDraw wrappers.
 
-The author explicitly states that Wine/Linux is not a target. Community reports name different last-working builds. The PCGamingWiki file bundles v2.79.3 and v2.81.3 as Wine/Proton-compatible (a comment names v2.81.3 as the latest), while a Lutris issue calls v2.81.3 the last working build but v2.81.2 the latest viable target. Other reports name v2.79.1 or "below 2.84". Treat all such claims as unverified anecdote. The current binary is v2.87.6 (re-released 2026-10-26), targets Windows 7+, and ships CHPE (emulated x86), ARM64EC (emulated x64) and ARM64X builds for **Windows on ARM** — not native ARM64 Linux builds. Do not use them in a Wine-on-Android prefix.
+The author explicitly states that Wine/Linux is not a target. Community reports name different last-working builds. The PCGamingWiki file bundles v2.79.3 and v2.81.3 as Wine/Proton-compatible (a comment names v2.81.3 as the latest), while a Lutris issue calls v2.81.3 the last working build but v2.81.2 the latest viable target. Other reports name v2.79.1 or "below 2.84". Treat all such claims as unverified anecdotes. The current binary is v2.87.6 (re-released 2026-10-26), targets Windows 7+, and ships CHPE (emulated x86), ARM64EC (emulated x64) and ARM64X builds for **Windows on ARM** — not native ARM64 Linux builds. Do not use them in a Wine-on-Android prefix.
 
 ## 6.6 Case study: Project I.G.I.: I'm Going In (2000)
 
@@ -110,7 +110,7 @@ Use your own legally acquired copy. IGI is a useful teaching case because it exe
    ```sh
    WINEARCH=win32 WINEPREFIX=~/igi32 wineboot -u
    ```
-   A pure 32-bit prefix avoids installer and wrapper surprises. A normal `win64` prefix can also run a 32-bit game through Wine WoW64 (`syswow64`); use `WINEARCH=win32` when a legacy wrapper or installer specifically needs it.
+   A normal `win64` prefix runs 32-bit games through Wine WoW64 (`syswow64`); in Wine 11.0's new WoW64 mode a pure `WINEARCH=win32` prefix is deprecated and unsupported. The command above is retained for older Wine or a legacy wrapper that specifically needs it.
 2. **Windows version:** start with Windows 7 in `winecfg`. If the game reports `DDERR_UNSUPPORTED`, try Windows XP SP3 — a community workaround recorded on the [PCGamingWiki IGI page](https://www.pcgamingwiki.com/wiki/Project_I.G.I.%3A_I%27m_Going_In), not confirmed by a primary source.
 3. **Install to an ASCII-only path** (for example `C:\Games\IGI`). Non-ASCII paths break many legacy installers.
 4. **Apply the Large Address Aware / 4GB patch** if the game runs out of memory on large levels; this is general 32-bit advice from PCGamingWiki, not an IGI-verified fix [NEEDS VERIFICATION: depends on build and installer].

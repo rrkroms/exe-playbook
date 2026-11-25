@@ -189,7 +189,7 @@ Mitigations, from least to most invasive:
    adb shell device_config set_sync_disabled_for_tests persistent
    adb shell device_config put activity_manager max_phantom_processes 2147483647
    ```
-   Order matters. [NEEDS VERIFICATION — these switches are widely reported in the community, but availability and exact names vary by device and Android build; check your device before relying on them.]
+   Order matters. The underlying AOSP keys exist, but the exact adb/device_config incantations are community-documented and not officially supported; OEM builds vary — verify with `adb shell settings list global` before relying on them.
 
 Also disable battery optimisation for the frontend and use `termux-wake-lock`. A wake lock keeps the CPU on; it does **not** keep the screen on. Keep Termux:X11 in the same app family so off-screen throttling does not kill rendering.
 
@@ -202,7 +202,7 @@ export WINEPREFIX="$HOME/.wine-game" WINEARCH=win64
 WINEDEBUG=-all wineboot --init
 ```
 
-Create a 32-bit-only prefix (only for games that truly need it):
+Create a legacy pure 32-bit prefix (only for older Wine or a wrapper that truly needs it; deprecated and unsupported in Wine 11.0's new WoW64 mode):
 
 ```sh
 export WINEPREFIX="$HOME/.wine-game32" WINEARCH=win32

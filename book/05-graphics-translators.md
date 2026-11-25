@@ -83,10 +83,10 @@ Versions below are the snapshot from the research brief, verified 2026-11-23. "*
 | [D3D8to9](https://github.com/crosire/d3d8to9) | D3D8 API + bytecode shaders → D3D9 | Active source; no formal release verified | Exact translation only; VSync may differ; needs legacy D3DX for shaders | BSD-2-Clause |
 | [DxWrapper](https://github.com/elishacloud/dxwrapper) | DDraw/D3D1–7 → D3D9, D3D8 → D3D9, DInput/DSound hooks | v1.9.8700.25 (12 Oct 2026) | Drop-in stub DLL + INI; can chain to DXVK | zlib/BSD-2/others |
 | [DDrawCompat](https://github.com/narzoul/DDrawCompat) | In-place DDraw/D3D1–7 + GDI fixes (no API conversion) | v0.7.2 pre-release (14 Oct 2026) | Windows Vista–11 only; unsupported in Wine/VMs; needs SSE2 + SM3 GPU | BSD Zero Clause |
-| [cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw) | 2D software DirectDraw → GDI/OpenGL/D3D9 | v7.1.0.0 [NEEDS VERIFICATION: year not confirmed] | 2D/paletted software-DDraw only; works in Wine on Linux/macOS/Android | MIT |
+| [cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw) | 2D software DirectDraw → GDI/OpenGL/D3D9 | v7.1.0.0 (28 Dec 2024) | 2D/paletted software-DDraw only; works in Wine on Linux/macOS/Android | MIT |
 | [WineD3D](https://gitlab.winehq.org/wine/wine) | DDraw/D3D1–11 → OpenGL (experimental Vulkan renderer) | Bundled with Wine | CSMT default since Wine 3.2/4.0; often slow/buggy for D3D7 | LGPL-2.1+ |
 | [Zink](https://docs.mesa3d.org/drivers/zink.html) | OpenGL/ES → Vulkan (Mesa Gallium) | Mesa release train | GL 2.1 → 4.6; supplies OpenGL to WineD3D where native GL is absent | MIT |
-| [VirGL](https://docs.mesa3d.org/drivers/virgl/) / [Venus](https://docs.mesa3d.org/drivers/venus.html) | Guest OpenGL → host OpenGL; guest Vulkan → host Vulkan | virglrenderer 1.0+ | Linux guest under QEMU; GL 4.3 default, 4.6 with blob; double shader translation | MIT [NEEDS VERIFICATION for virglrenderer GitLab license] |
+| [VirGL](https://docs.mesa3d.org/drivers/virgl/) / [Venus](https://docs.mesa3d.org/drivers/venus.html) | Guest OpenGL → host OpenGL; guest Vulkan → host Vulkan | virglrenderer 1.0+ | Linux guest under QEMU; GL 4.3 default, 4.6 with blob; double shader translation | MIT (upstream virglrenderer LICENSE; Mesa's VirGL/Venus drivers are also MIT) |
 | [GXVK](https://github.com/CkNoSFeRaTU/gxvk) | 3Dfx Glide 2.x/3.x → Vulkan | Early alpha v0.1 (2026) | Wine/Linux; Windows untested; for games with a Glide path | zlib |
 | [DXVK-NVAPI](https://github.com/jp7677/dxvk-nvapi) | NVAPI/NVOFAPI → DXVK/VKD3D | v0.9.3 (30 Oct 2026) | DLSS/Reflex/OMM; enable with `DXVK_ENABLE_NVAPI=1` | MIT |
 
@@ -126,7 +126,7 @@ The legacy tools exist because older games use fixed-function hardware and Direc
 - **D7VK** targets D3D7 immediate mode by translating to DXVK's D3D9 backend. It deploys as `ddraw.dll` with a `native,builtin` override and relies on Wine's real DirectDraw implementation underneath. It rejects retained-mode D3D7 and has a 2048-pixel surface limit. Requires Vulkan 1.4. Now in maintenance mode.
 - **D8VK** was the original D3D8 → DXVK bridge. It is merged into upstream DXVK; use DXVK's `d3d8.dll` rather than the discontinued standalone release.
 - **D3D8to9** converts D3D8 calls and bytecode shaders to D3D9 with exact translation, then DXVK handles D3D9. VSync behaviour may differ, and legacy D3DX is needed for shaders.
-- **DxWrapper** is a configurable stub DLL plus INI file. For D3D7 it can redirect `ddraw` to D3D9 (`dd7to9=1`) and then chain to DXVK's D3D9. It includes game-specific options, including for Project I.G.I.
+- **DxWrapper** is a configurable stub DLL plus INI file. For D3D7 it can redirect `ddraw` to D3D9 (`dd7to9=1`) and then chain to DXVK's D3D9. It includes game-specific options, including some for Project I.G.I.
 - **dgVoodoo2** wraps Glide, DirectDraw/D3D3–7, D3D8.1 and D3D9 and outputs D3D11/D3D12 (or WARP). It supports full SM1/2/3 fixed function, paletted textures and 8/16/32-bit modes — exactly the features legacy games need. It is closed-source freeware targeting Windows 7+, and its author does not support Wine/Linux. Under Wine it must be installed **locally next to the EXE**, never in `system32`.
 - **cnc-ddraw** handles 2D software-DirectDraw games (including paletted titles), replacing the surface with GDI/OpenGL/D3D9. It supports Wine on Linux, macOS and Android. It does **not** help a game that uses Direct3D for 3D.
 - **DDrawCompat** makes in-place fixes to DirectDraw/GDI without converting APIs, but it is Windows-only and unsupported in Wine or VMs, so it is not usable in an Android or ARM-Linux pipeline.
@@ -198,18 +198,18 @@ This matters because Vulkan has no fixed-function pipeline. Translators must exp
 Consequences for users:
 
 - Features that depend on exact fixed-function behaviour (paletted textures, 16-bit colour, specific fog or alpha-test semantics) are where legacy games break. Prefer a translator that explicitly supports them.
-- Paletted 8-bit DirectDraw content generally should **not** be resolution-upscaled through a wrapper; colour-index handling can break [NEEDS VERIFICATION: corroborate per-game].
+- Paletted 8-bit DirectDraw can be upscaled with nearest-neighbour or bilinear shaders; cnc-ddraw restricts bicubic/lanczos filters to 16/32-bit games, and some titles have per-game upscaling issues — test per title.
 - Fixed-function paths usually do not need `d3dcompiler`; shader-based D3D9/D3D11 paths may need a working `d3dcompiler_*` DLL depending on the translator version.
 
 ## 5.10 32-bit versus 64-bit
 
 The game's PE architecture decides everything downstream:
 
-- A **32-bit game** loads 32-bit DLLs (`syswow64`). A normal `win64` prefix runs them through Wine WoW64; use `WINEARCH=win32` only for a deliberately pure 32-bit prefix or a legacy wrapper that requires one. Almost every game from the D3D7/8 era is 32-bit.
+- A **32-bit game** loads 32-bit DLLs (`syswow64`) from a 64-bit prefix under Wine 11.0's new WoW64. Pure `WINEARCH=win32` prefixes are deprecated and unsupported in that mode, though older Wine or a legacy wrapper may still need one. Almost every game from the D3D7/8 era is 32-bit.
 - A **64-bit game** needs 64-bit DLLs and a 64-bit prefix.
-- On ARM64 hosts, CPU translation must cover the game's architecture. [FEX](https://github.com/FEX-Emu/FEX) implements a 64-bit x86 interface; [Box64](https://github.com/ptitSeb/box64) handles 64-bit x86-64 and [Box86](https://github.com/ptitSeb/box86) handles 32-bit x86. Frontends vary in which 32-bit path they provide [NEEDS VERIFICATION: confirm the specific frontend's 32-bit support before committing to a recipe].
+- On ARM64 hosts, CPU translation must cover the game's architecture. [FEX](https://github.com/FEX-Emu/FEX) supports both 32-bit and 64-bit x86 binaries; [Box64](https://github.com/ptitSeb/box64) targets x86-64 and [Box86](https://github.com/ptitSeb/box86) targets 32-bit x86. Frontends such as Winlator bundle Wine with Box86/Box64 and select per container — verify the exact build.
 - DXVK-Sarek's DDraw/D7VK components are built x86-only, which suits 32-bit legacy games but not 64-bit ones.
-- Antivirus false positives on 32-bit DXVK binaries are reported [NEEDS VERIFICATION: environment-dependent claim].
+- Antivirus false positives on 32-bit DXVK DLLs were acknowledged by the DXVK maintainer in September 2026; this is primarily a Windows-host AV problem, but the same 32-bit DLLs have also triggered ClamAV false positives on Linux (for example Bottles/Flatpak). It is not Android-specific ([DXVK issue #5762](https://github.com/doitsujin/dxvk/issues/5762)).
 
 ## 5.11 What to remember
 

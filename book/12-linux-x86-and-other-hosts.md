@@ -118,17 +118,17 @@ These are launch-time knobs, not components: changing one does not install a dri
 6. If the game starts but stutters at first, let shader caches warm; clear DXVK, VKD3D-Proton and Mesa caches together after changing any of those components (module 05).
 7. Add MangoHud for measurement, Gamescope for display problems, and GameMode for scheduler settings — one at a time, so you know which one changed behaviour.
 
-**Remaining limitations.** Kernel-level anti-cheat is still a hard blocker on Linux: it expects Windows and will not run under Wine, Proton or a compatibility layer. A Linux v2 of [Easy Anti-Cheat](https://onlineservices.epicgames.com/news/introducing-easy-anti-cheat-linux-v2) was announced with signed kernel/eBPF requirements [NEEDS VERIFICATION — exact device and distribution coverage is unspecified]. DRM that depends on a Windows kernel component fails for the same reason.
+**Remaining limitations.** Kernel-level anti-cheat is still a hard blocker on Linux: it expects Windows and will not run under Wine, Proton or a compatibility layer. A Linux v2 of [Easy Anti-Cheat](https://onlineservices.epicgames.com/news/introducing-easy-anti-cheat-linux-v2) was announced with signed kernel/eBPF requirements; Epic publishes a trusted-signing key list and names Steam Hardware as a known gap, so coverage depends on the device's boot configuration. DRM that depends on a Windows kernel component fails for the same reason.
 
 ### 12.4.1 32-bit games and WoW64 on x86_64
 
-A 32-bit Windows game still needs a 32-bit Wine prefix (`WINEARCH=win32`) and 32-bit Windows DLLs in `syswow64`. On an x86-64 host the CPU executes the 32-bit instructions natively — there is no translation. [WoW64](https://learn.microsoft.com/en-us/windows/win32/winprog64/running-32-bit-applications) is only the API/ABI thunk that converts 32-bit arguments and structures into their 64-bit forms before they reach the host. Calling WoW64 an emulator is wrong on every host, and especially wrong here.
+A 32-bit Windows game normally runs in a 64-bit prefix through WoW64, with 32-bit Windows DLLs in `syswow64`; a pure `WINEARCH=win32` prefix is deprecated and unsupported under Wine 11.0's new WoW64 mode. On an x86-64 host the CPU executes the 32-bit instructions natively — there is no translation. [WoW64](https://learn.microsoft.com/en-us/windows/win32/winprog64/running-32-bit-applications) is only the API/ABI thunk that converts 32-bit arguments and structures into their 64-bit forms before they reach the host. Calling WoW64 an emulator is wrong on every host, and especially wrong here.
 
 "Multilib" means having both 64-bit and 32-bit host libraries installed. A 64-bit-only Wine installation will fail to start a 32-bit game even though the CPU is capable; the distribution's `wine32` or `lib32` packages are required, not a translator.
 
 | Symptom | Likely cause | First check |
 |---|---|---|
-| "Bad EXE format" for an old game | 32-bit support missing | 32-bit Wine packages, `WINEARCH=win32` |
+| "Bad EXE format" for an old game | 32-bit support missing | 32-bit Wine packages / WoW64 `syswow64` DLLs; `WINEARCH=win32` only on older Wine |
 | 32-bit DLL fails to load | Architecture mismatch | 32-bit translator DLLs in `syswow64`, not `system32` |
 | Game runs, then stalls at startup | Missing directx helper DLLs | Install D3DX/XAudio/XInput helpers (module 03) |
 | DXVK DLL ignored | Override not set | `WINEDLLOVERRIDES` with `n` for `d3d9`/`dxgi` (module 05) |
@@ -150,14 +150,14 @@ macOS is a non-Windows host with a different kernel, ABI and graphics stack. The
 | [CrossOver](https://www.codeweavers.com/crossover) | Commercial Wine distribution | CrossOver 26 shipped Wine 11.0, D3DMetal 3.0, DXMT 0.72 and vkd3d 1.18; roughly $74. Proprietary |
 | [Game Porting Toolkit](https://developer.apple.com/games/game-porting-toolkit) | Developer evaluation environment; includes D3DMetal and Metal Shader Converter | Closed source; GPTK 4 in the briefs. Third-party wrappers generally require you to supply toolkit components yourself |
 | D3DMetal | D3D11/12 → Metal, inside GPTK | Best Direct3D 12 route on macOS; license-gated through GPTK |
-| [DXMT](https://github.com/3Shain/dxmt) | D3D10/11 → Metal; no D3D12 | LGPL; community reports often find it faster than DXVK [NEEDS VERIFICATION: no primary benchmark in the briefs] |
+| [DXMT](https://github.com/3Shain/dxmt) | D3D10/11 → Metal; no D3D12 | LGPL; community reports, including from DXMT's author, often find it faster than DXVK+MoltenVK per game; no controlled multi-game benchmark |
 | [DXVK](https://github.com/doitsujin/dxvk) + [MoltenVK](https://github.com/KhronosGroup/MoltenVK) | D3D → Vulkan → Metal | MoltenVK is deprecated by Khronos; prefer KosmicKrisp on Apple Silicon |
 | [KosmicKrisp](https://docs.mesa3d.org/drivers/kosmickrisp.html) | Vulkan → Metal on Apple Silicon | Mesa's conformant Apple Silicon Vulkan driver; **requires macOS 26+ and Metal 4** (MIT license) |
 | [Whisky](https://github.com/frankea/Whisky) | Frontend | Original project discontinued; the frankea fork is active (GPL-3.0, Wine 11.19, DXMT + DXVK) |
 
 **Version gate:** KosmicKrisp requires macOS 26+ and Metal 4. On older Apple Silicon macOS the only Vulkan-to-Metal layer is the now-deprecated MoltenVK, which may need an older DXVK. For this reason "DXVK + KosmicKrisp" is not a universal Apple Silicon recommendation.
 
-CrossOver 27 was announced as ARM64-only for Apple Silicon [NEEDS VERIFICATION — confirm against CodeWeaver's release notes]. Intel Macs need no CPU translation for x86-64 Windows code, but still need Wine and a Vulkan-to-Metal path (MoltenVK); KosmicKrisp does not support Intel Macs. Apple Silicon Macs need all three translations.
+[CrossOver 27](https://www.codeweavers.com/blog/mjohnson/2026/6/11/whats-in-and-whats-out-for-crossover-27) is announced as Apple-Silicon-only on macOS Sonoma+, with ARM64 builds for Mac and Linux and 32-bit bottles dropped; as of November 2026 it is Preview only, with GA expected early 2027. Intel Macs' last version is CrossOver 26. Intel Macs need no CPU translation for x86-64 Windows code, but still need Wine and a Vulkan-to-Metal path (MoltenVK); KosmicKrisp does not support Intel Macs. Apple Silicon Macs need all three translations.
 
 ### 12.5.1 Choosing a macOS graphics route
 
@@ -185,10 +185,10 @@ Note the consequence for legacy titles: an old 32-bit D3D7 game on Apple Silicon
 
 ChromeOS is a Linux-kernel-based operating system whose desktop is the Chrome browser. Games reach it through virtual machines and containers, not through a native Wine desktop.
 
-- **[Crostini](https://chromeos.dev/en/linux/linux-on-chromeos-deep-dive)** runs Linux apps in a VM (using [crosvm](https://github.com/google/crosvm) over [KVM](https://www.linux-kvm.org/)) plus a container. Wayland and X11 reach the host display through Sommelier, ChromeOS's display bridge. GPU acceleration is device-dependent, and Google has deprecated graphics acceleration for Linux-on-ChromeOS; a containerless "Baguette" mode is described from M147 [NEEDS VERIFICATION — confirm the current ChromeOS support statement].
+- **[Crostini](https://chromeos.dev/en/linux/linux-on-chromeos-deep-dive)** runs Linux apps in a VM (using [crosvm](https://github.com/google/crosvm) over [KVM](https://www.linux-kvm.org/)) plus a container. Wayland and X11 reach the host display through Sommelier, ChromeOS's display bridge. Google describes graphics acceleration as **no longer supported** and Baguette as the default for **new installs from M147**, controlled by `#containerless-crostini` ([ChromeOS developer news](https://developers.google.com/chromeos/app-development/develop/news)).
 - **Borealis** was Google's managed Steam environment: Steam in an Arch VM with the [Venus](https://docs.mesa3d.org/drivers/venus.html) virtual Vulkan driver for near-native performance. Its managed beta ended on **1 January 2026**; DIY Crostini is the remaining route ([ChromeOS Steam announcement](https://chromeos.dev/en/posts/bringing-steam-to-chromeos)).
 - **[VirGL](https://docs.mesa3d.org/drivers/virgl/)** translates guest OpenGL to host OpenGL; **Venus** carries guest Vulkan to the host Vulkan driver. They are *virtualization/paravirtualization* layers, not alternatives to DXVK. A typical chain is: DXVK produces Vulkan in the guest, Venus transports it to the host ChromeOS driver.
-- **Steam for Chromebook** had a hardware floor of an i3/Ryzen 3 class CPU, 8 GB RAM and 128 GB storage, on a limited set of devices ([Google support](https://support.google.com/chromebook/answer/14220699)) [NEEDS VERIFICATION — current device support].
+- **Steam for Chromebook** had a hardware floor of an i3/Ryzen 3 class CPU, 8 GB RAM and 128 GB storage, on a limited set of devices ([Google support](https://support.google.com/chromebook/answer/14220699)); Google still labels it Beta with an explicit, changing supported-device list.
 
 ### Step-by-step notes for ChromeOS
 

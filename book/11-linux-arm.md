@@ -85,7 +85,7 @@ Two distinctions to keep sharp:
 
 **muvm** is a microVM built on libkrun. It gives x86 binaries a 4K-page environment, shares the host root filesystem with the guest, and lets you pick the emulator with `--emu=fex` or `--emu=box`. It is **not a CPU translator** — FEX or Box64 inside it performs the translation. The roughly 20% Asahi penalty associated with this setup comes from the microVM boundary, not from FEX itself ([Asahi progress report](https://asahilinux.org/2026/11/progress-report-7-3/)).
 
-> [NEEDS VERIFICATION — one source records an Asahi progress report numbered 7.3 while another records AGX as fully upstream in Mesa 25.2 / Linux 6.16. The former is a report number, not necessarily a kernel version. Confirm the exact kernel version before relying on a number.]
+> **Version note.** Asahi's [Linux 7.3 progress report](https://asahilinux.org/2026/11/progress-report-7-3/) refers to the **kernel release** 7.3, not a report number, and measures a roughly 20% muvm performance penalty. The “fully upstream graphics stack” statement comes from the [Linux 6.16 report](https://asahilinux.org/2025/08/progress-report-6-16/) and refers to Mesa 25.2.
 
 ## 11.4 Host 1: Asahi Linux (Apple Silicon)
 
@@ -138,7 +138,7 @@ Steam wrapper (Fedora Asahi Remix)
 
 **What it is.** Snapdragon X Elite laptops use Oryon CPU cores and an Adreno GPU. The open-source path is `drm/msm` in the Linux kernel plus Mesa's Freedreno OpenGL and Turnip Vulkan drivers ([Freedreno docs](https://docs.mesa3d.org/drivers/freedreno.html)). Turnip is a Vulkan driver, not a graphics translator: it consumes the Vulkan that DXVK produces.
 
-**Status snapshot.** Linux kernel 6.15 brought support for many X Elite laptops ([kernel](https://www.kernel.org/)). GPU firmware is not freely redistributable and must be extracted from the device's Windows installation — a real setup step, not an optional tweak. FEX demos on this hardware have been shown by Linaro/TUXEDO, with Box64 as an alternative [NEEDS VERIFICATION — the brief names the demo but provides no primary URL; confirm before attributing it]. There is no native ARM Steam release, so Wine/Proton must be arranged manually.
+**Status snapshot.** Linux kernel 6.15 brought support for many X Elite laptops ([kernel](https://www.kernel.org/)). GPU firmware is not freely redistributable and must be extracted from the device's Windows installation — a real setup step, not an optional tweak. FEX demos on this hardware were shown by [Linaro](https://www.linaro.org/blog/linux-on-snapdragon-x-elite) and TUXEDO at Linaro Connect 2025, with Box64 as an alternative; [TUXEDO later put its X1E laptop project on hold](https://www.tuxedocomputers.com/en/Discontinuation-of-ARM-notebooks-with-Snapdragon-X-Elite-SoC.tuxedo). The demo was not a shipping product. There is no native ARM Steam release, so Wine/Proton must be arranged manually.
 
 **Page size.** Some Snapdragon configurations use 16K pages. If you hit the Wine ARM64EC 4K requirement, use muvm or a Wine-emulation/P3S-style workaround; this is the same class of problem as Asahi, not a driver bug ([Android page-size docs](https://developer.android.com/guide/practices/page-sizes) for the general 16K constraint).
 
@@ -146,7 +146,7 @@ Steam wrapper (Fedora Asahi Remix)
 
 1. Install a distribution with a kernel that includes your specific laptop's `drm/msm` support; 6.15 covers many but not all models.
 2. Extract the Adreno firmware from the Windows installation and place it where the kernel expects it. Without it, the GPU will not initialize.
-3. Verify the display and Vulkan device before touching Wine. `vulkaninfo --summary` should name Turnip; note that community reports describe GPU initialization failures on some configurations [NEEDS VERIFICATION: no primary bug report in the briefs].
+3. Verify the display and Vulkan device before touching Wine. `vulkaninfo --summary` should name Turnip; note that community bug reports describe GPU/firmware-init failures on some configurations ([Ubuntu Launchpad #2150591](https://bugs.launchpad.net/ubuntu/+source/mesa/+bug/2150591), confirmed; [Phoronix Ubuntu 26.04 X Elite review](https://www.phoronix.com/review/ubuntu-2604-snapdragon-x-elite); [redroid #908](https://github.com/remote-android/redroid-doc/issues/908)); these are device-specific, with no upstream advisory found.
 4. Choose FEX (backend DLL with ARM64EC Wine, or whole-process) or Box64 depending on whether you can supply an ARM64 Wine build.
 5. Use `TU_DEBUG=sysmem` or `TU_DEBUG=gmem` to switch render path when diagnosing artifacts; these are Turnip debug controls, not Wine settings ([Mesa env vars](https://docs.mesa3d.org/envvars.html)).
 
@@ -156,7 +156,7 @@ Steam wrapper (Fedora Asahi Remix)
 
 ARM Chromebooks pair an ARM SoC — often a Mali GPU — with ChromeOS. This is a **virtualized** path rather than a native Linux desktop one.
 
-[Crostini](https://chromeos.dev/en/linux/linux-on-chromeos-deep-dive) runs Linux apps in a VM (crosvm/KVM) plus a container, presenting graphics through Sommelier (a Wayland/X bridge). Graphics acceleration exposure is device-dependent, and Google has deprecated graphics acceleration for Linux-on-ChromeOS; a containerless "Baguette" mode is described from M147 [NEEDS VERIFICATION — confirm the current support statement with ChromeOS documentation]. **Borealis**, the managed Steam-in-an-Arch-VM environment that used Venus virtual Vulkan for near-native performance, ended its beta on 1 January 2026; only DIY Crostini remains ([ChromeOS Steam post](https://chromeos.dev/en/posts/bringing-steam-to-chromeos)).
+[Crostini](https://chromeos.dev/en/linux/linux-on-chromeos-deep-dive) runs Linux apps in a VM (crosvm/KVM) plus a container, presenting graphics through Sommelier (a Wayland/X bridge). Graphics acceleration exposure is device-dependent. Google has deprecated graphics acceleration for Linux-on-ChromeOS and describes it as **no longer supported**; it also names Baguette as the default for **new installs from M147**, controlled by the `#containerless-crostini` flag ([ChromeOS developer news](https://developers.google.com/chromeos/app-development/develop/news)); an older Chromium MOTD script still says 143, so treat M147 as authoritative. **Borealis**, the managed Steam-in-an-Arch-VM environment that used Venus virtual Vulkan for near-native performance, ended its beta on 1 January 2026; only DIY Crostini remains ([ChromeOS Steam post](https://chromeos.dev/en/posts/bringing-steam-to-chromeos)).
 
 For Mali GPUs the underlying driver is Mesa [Panfrost/PanVK](https://docs.mesa3d.org/drivers/panfrost.html), but inside the VM the path may instead be [Venus](https://docs.mesa3d.org/drivers/venus.html) (Vulkan streaming) or [VirGL](https://docs.mesa3d.org/drivers/virgl/) (OpenGL paravirtualization). Remember from module 05: VirGL and Venus carry *guest* graphics to the host; they do not replace DXVK. Box64/FEX can run Wine inside Crostini, but this is unsupported by Google.
 
