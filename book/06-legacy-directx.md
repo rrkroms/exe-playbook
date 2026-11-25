@@ -44,7 +44,7 @@ Why it matters: a translator must map each render state to an equivalent shader 
 
 **DirectDraw** is the 2D part of DirectX: offscreen surfaces, page flipping, blitting and palettes. Games used it for menus, sprites and full-motion video even when 3D ran through D3D.
 
-- **Paletted (8-bit) colour** stores a pixel as an index into a 256-entry palette. Changing the palette changes many pixels at once. Wrappers that upscale or convert the surface can break palette handling; avoid forcing resolution upscaling on 8-bit paletted DirectDraw [NEEDS VERIFICATION: corroborate per-game].
+- **Paletted (8-bit) colour** stores a pixel as an index into a 256-entry palette. Changing the palette changes many pixels at once. Wrappers that upscale or convert the surface can break palette handling; dgVoodoo2's own documentation warns against forced resolution for 8-bit paletted DirectDraw. Even so, verify per game.
 - **16-bit colour** (RGB565/RGB555) packs a pixel into two bytes. It was the performance sweet spot in 1999. [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) exposes settings such as `EnumeratedResolutionBitdepths` and dithering to preserve these modes; [DDrawCompat](https://github.com/narzoul/DDrawCompat) handles them natively but is Windows-only.
 - [cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw) replaces **2D software DirectDraw** (typical of paletted titles) with GDI, OpenGL or D3D9. It works in Wine on Linux, macOS and Android, but it does not translate a D3D 3D path.
 - [D7VK](https://github.com/WinterSnowfall/d7vk) deploys as `ddraw.dll` and expects Wine's real DirectDraw underneath; it is therefore a D3D wrapper sitting *above* DirectDraw, not a DirectDraw replacement.
@@ -55,7 +55,7 @@ A **shader model** is the version of the shader assembly language and its capabi
 
 - SM1.x has very limited instruction counts and no dynamic branching; SM2.0 adds more registers; SM3.0 adds dynamic flow control.
 - Many D3D9 games ship **both** a fixed-function path and shader paths. A translator may handle one well and the other poorly.
-- DXVK 3.x's `dxbc-spirv` compiler handles D3D9/8 fixed function without requiring a `d3dcompiler` DLL. Shader-heavy paths may still depend on `d3dcompiler_*` availability [NEEDS VERIFICATION: version-dependent].
+- DXVK 3.x uses `dxbc-spirv` for D3D8/9 shader and fixed-function compilation; upstream DXVK requires no `d3dcompiler` DLL. Any `d3dcompiler` dependency is a game/Wine-side issue, not a DXVK 3.x requirement.
 - [D3D8to9](https://github.com/crosire/d3d8to9) translates D3D8 bytecode shaders exactly, but needs legacy D3DX for shader work.
 
 The practical rule: a 1999–2002 game usually does **not** need a modern shader compiler; it needs correct fixed-function emulation and DirectDraw behaviour. Choosing a D3D12-era toolchain solves the wrong problem.
@@ -65,7 +65,7 @@ The practical rule: a 1999–2002 game usually does **not** need a modern shader
 | Tool | Best for | Avoid when |
 |---|---|---|
 | D7VK v2.4 | D3D7 immediate mode, Vulkan 1.4 available, 2048px surfaces acceptable | Retained-mode D3D7; Vulkan < 1.4; large surfaces |
-| [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) v1.13.0 | D3D3–11 on Vulkan 1.1/1.2, ARM/mobile | You need a maintained upstream build [NEEDS VERIFICATION: release date unconfirmed] |
+| [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) v1.14.1 | D3D3–11 on Vulkan 1.1/1.2, ARM/mobile | Fork author reports their own FOSS projects on a 1–3 month halt; check the [releases page](https://github.com/pythonlover02/DXVK-Sarek/releases) before relying on a build |
 | DXVK (merged D8VK) | D3D8 games; needs `d3d8.dll` + `d3d9.dll` | Game uses D3D7 or DirectDraw only |
 | D3D8to9 | Exact D3D8 → D3D9 conversion, then DXVK | VSync-sensitive games; shaders without legacy D3DX |
 | [DxWrapper](https://github.com/elishacloud/dxwrapper) | DDraw/D3D1–7 redirection (`dd7to9=1`), game-specific fixes | You want a pure, minimal translator |
@@ -81,11 +81,11 @@ dgVoodoo2 is frequently recommended for legacy games, but it needs careful handl
 
 1. Copy **all** 32-bit dgVoodoo2 DLLs **locally next to the game EXE**, not into the prefix's `system32`.
 2. Set `WINEDLLOVERRIDES=ddraw,d3d11,dxgi=n` so those names resolve to the local native DLLs.
-3. `dgVoodoo.conf` is searched in the DLL directory, then the EXE directory, then appdata. Useful fields include `OutputAPI` (`d3d12_fl12_0`, `d3d12_fl11_0`, `d3d11_fl11_0`, `d3d11_fl10_1`, `d3d11_fl10_0`, `d3d11_warp`), resolution mode, filtering and FPS limit.
-4. To chain with DXVK, let dgVoodoo2 output D3D11 and supply DXVK's `d3d11.dll` + `dxgi.dll` underneath.
+3. `dgVoodoo.conf` is searched in the DLL directory, then the EXE directory, then appdata. Useful fields include `OutputAPI` (`d3d12_fl12_0`, `d3d12_fl11_0`, `d3d11_fl11_0`, `d3d11_fl10_1`, `d3d11_fl10_0`, `d3d11warp`, `bestavailable`), resolution mode, filtering and FPS limit.
+4. A common community setup chains dgVoodoo2 to DXVK by letting dgVoodoo2 output D3D11 and supplying DXVK's `d3d11.dll` and `dxgi.dll` underneath; neither project documents this officially.
 5. **Never** override `d3d8`/`d3d9` with DXVK while dgVoodoo's own D3D8/D3D9 DLLs are active, and never stack two DirectDraw wrappers.
 
-Under Wine the author does not claim support; community reports suggest v2.81.3 was the last Wine-friendly release [NEEDS VERIFICATION]. The current binary targets Windows 7+ and ships CHPE/ARM64EC builds for **Windows on ARM**, which are **not** the same as a native ARM64 Linux build and should not be used in a Wine-on-Android prefix.
+The author explicitly states that Wine/Linux is not a target. Community reports name different last-working builds. The PCGamingWiki file bundles v2.79.3 and v2.81.3 as Wine/Proton-compatible (a comment names v2.81.3 as the latest), while a Lutris issue calls v2.81.3 the last working build but v2.81.2 the latest viable target. Other reports name v2.79.1 or "below 2.84". Treat all such claims as unverified anecdote. The current binary is v2.87.6 (re-released 2026-10-26), targets Windows 7+, and ships CHPE (emulated x86), ARM64EC (emulated x64) and ARM64X builds for **Windows on ARM** — not native ARM64 Linux builds. Do not use them in a Wine-on-Android prefix.
 
 ## 6.6 Case study: Project I.G.I.: I'm Going In (2000)
 
@@ -111,11 +111,11 @@ Use your own legally acquired copy. IGI is a useful teaching case because it exe
    WINEARCH=win32 WINEPREFIX=~/igi32 wineboot -u
    ```
    A pure 32-bit prefix avoids installer and wrapper surprises. A normal `win64` prefix can also run a 32-bit game through Wine WoW64 (`syswow64`); use `WINEARCH=win32` when a legacy wrapper or installer specifically needs it.
-2. **Windows version:** start with Windows 7 in `winecfg`. If the game reports `DDERR_UNSUPPORTED`, try Windows XP SP3 — this is a community workaround [NEEDS VERIFICATION: not confirmed by primary source].
+2. **Windows version:** start with Windows 7 in `winecfg`. If the game reports `DDERR_UNSUPPORTED`, try Windows XP SP3 — a community workaround recorded on the [PCGamingWiki IGI page](https://www.pcgamingwiki.com/wiki/Project_I.G.I.%3A_I%27m_Going_In), not confirmed by a primary source.
 3. **Install to an ASCII-only path** (for example `C:\Games\IGI`). Non-ASCII paths break many legacy installers.
-4. **Apply the Large Address Aware / 4GB patch** if the game runs out of memory on large levels [NEEDS VERIFICATION: depends on build and installer].
+4. **Apply the Large Address Aware / 4GB patch** if the game runs out of memory on large levels; this is general 32-bit advice from PCGamingWiki, not an IGI-verified fix [NEEDS VERIFICATION: depends on build and installer].
 5. **Runtimes:** install DirectX 7/8-era components and whatever Visual C++ runtime the installer needs. **No `d3dcompiler` is required** for the D3D7 fixed-function path.
-6. **Cap FPS at 60.** Unlimited frame rates destabilise old engines.
+6. **Cap FPS at a stable rate** (30–60 depending on build or patch). Unlimited frame rates destabilise old engines.
 7. **Place the chosen 32-bit wrapper DLL next to the EXE** and set the matching override from module 05.7. Copying without overriding has no effect.
 
 ### 6.6.2 Decision tree
@@ -128,7 +128,7 @@ Game starts, no 3D / "no 3D card"
   -> choose a D3D7 wrapper:
        Vulkan 1.4 driver available?
          yes -> D7VK v2.4 (ddraw.dll, override ddraw=native,builtin)
-         no  -> DXVK-Sarek 1.13.0 (Vulkan 1.1/1.2, mobile builds)
+         no  -> DXVK-Sarek v1.14.1 (Vulkan 1.1/1.2, mobile builds)
        Need dgVoodoo2 features?
          -> dgVoodoo2 -> D3D11 FL10.1 -> DXVK d3d11/dxgi
        D3D7 path broken?
@@ -138,7 +138,7 @@ Game starts, no 3D / "no 3D card"
        Last resort -> WineD3D (works, but geometry errors reported)
 
 DDERR_UNSUPPORTED
-  -> try Windows XP SP3 [NEEDS VERIFICATION]
+  -> try Windows XP SP3 [NEEDS VERIFICATION — community report; see §6.6.1]
 
 Vertex explosions / corrupt geometry
   -> D7VK fixes, DxWrapper options, LAA/4GB patch
@@ -168,7 +168,7 @@ Android frontend (e.g. Winlator)
 
 Steps:
 
-1. Use a frontend that provides a **32-bit-capable x86 translation path**. [Box64](https://github.com/ptitSeb/box64) handles 64-bit x86-64; its box32 component and [FEX](https://github.com/FEX-Emu/FEX) are the relevant 32-bit routes. Which one is bundled is frontend-specific [NEEDS VERIFICATION: check the exact frontend build].
+1. Use a frontend that provides a **32-bit-capable x86 translation path**. [Box64](https://github.com/ptitSeb/box64) handles 64-bit x86-64, while 32-bit Wine components traditionally need [Box86](https://github.com/ptitSeb/box86); experimental box32 and [FEX](https://github.com/FEX-Emu/FEX) are other routes. The bundled path varies by frontend [NEEDS VERIFICATION: check the exact frontend build].
 2. Use a Vulkan 1.4 driver if you choose D7VK. On Adreno, [Turnip](https://docs.mesa3d.org/drivers/freedreno.html) (Mesa's open-source Vulkan driver) is injected **per app**; the stock Qualcomm driver should remain for the system UI. This needs no root for per-app injection.
 3. Create the 32-bit prefix as in 6.6.1.
 4. Put the 32-bit `ddraw.dll` next to the EXE and set `WINEDLLOVERRIDES=ddraw=n,b` for DxWrapper, or `ddraw=native,builtin` for D7VK. Do not use both.
@@ -204,7 +204,7 @@ Steps:
 |---|---|---|
 | "Bad EXE format" | Prefix / CPU translation | 32-bit `WINEARCH`, 32-bit translator path |
 | "No 3D card" / no 3D | Missing D3D7 wrapper | Install D7VK, DXVK-Sarek or DxWrapper with correct override |
-| `DDERR_UNSUPPORTED` | Windows version reported by Wine | Try XP SP3 [NEEDS VERIFICATION] |
+| `DDERR_UNSUPPORTED` | Windows version reported by Wine | Try XP SP3 [NEEDS VERIFICATION — community report; see §6.6.1] |
 | Vertex explosions | Fixed-function mismatch / memory | D7VK fixes, DxWrapper options, LAA/4GB patch |
 | Black window, audio works | Presentation / swapchain | Virtual desktop, Gamescope, borderless window |
 | Slowdowns | DDraw locking path / CPU governor | `DdrawNoDrawBufferSysLock`, cap FPS, check translation overhead |
@@ -215,8 +215,8 @@ Steps:
 
 - Legacy DirectX is defined by fixed function, DirectDraw and 32-bit EXEs — not by a single translator.
 - Fixed function must be synthesised as shaders; paletted and 16-bit content is where translations diverge.
-- D7VK needs Vulkan 1.4 and Wine's DirectDraw underneath; DXVK-Sarek targets older Vulkan on mobile; dgVoodoo2 has the broadest legacy feature support but is closed-source and not Wine-supported.
-- For Project I.G.I.: use a 32-bit prefix, an ASCII install path, a D3D7 wrapper with the exact override, a 60 FPS cap, and your own legally acquired copy.
+- D7VK needs Vulkan 1.4 and Wine's DirectDraw underneath; DXVK-Sarek (v1.14.1 at the snapshot) targets older Vulkan on mobile; dgVoodoo2 has the broadest legacy feature support but is closed-source and not Wine-supported.
+- For Project I.G.I.: use a 32-bit prefix, an ASCII install path, a D3D7 wrapper with the exact override, a stable FPS cap (30–60), and your own legally acquired copy.
 - Never stack two DirectDraw wrappers; never use Windows-on-ARM dgVoodoo2 builds in a Wine-on-Android prefix.
 - Wine is not Windows. Compatibility varies, and community workarounds are not guarantees.
 
@@ -245,3 +245,6 @@ Next: [07 — GPU Drivers](07-gpu-drivers.md).
 - Gamescope — https://github.com/ValveSoftware/gamescope
 - Project I.G.I.: I'm Going In — https://www.pcgamingwiki.com/wiki/Project_I.G.I.%3A_I%27m_Going_In
 - Mesa environment variables — https://docs.mesa3d.org/envvars.html
+- DXVK-Sarek releases — https://github.com/pythonlover02/DXVK-Sarek/releases
+- Box86 — https://github.com/ptitSeb/box86
+- dgVoodoo2 Wine/Proton community reports — https://community.pcgamingwiki.com/files/file/3600-dgvoodoo2-v2793-v2813-wineproton-compatible/ ; https://github.com/lutris/dgvoodoo2/issues/2
