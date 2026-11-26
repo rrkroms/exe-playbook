@@ -149,7 +149,7 @@ Wine implements Windows audio APIs and forwards them to a host audio server.
 Checklist:
 
 - Set `PULSE_SERVER=127.0.0.1` inside proot so Wine connects to Termux's PulseAudio. PipeWire-pulse is a common alternative.
-- Confirm the audio server is actually running before blaming Wine. On Android, battery optimisation and the phantom process killer (§8.10) can kill the server.
+- Confirm the audio server is actually running before blaming Wine. On Android, battery optimisation and the phantom process killer ([Section 8.10 — Android phantom process killer](#810-android-phantom-process-killer)) can kill the server.
 - Silence, crackling and crashes at audio init often trace to a missing `xaudio2_*` DLL, wrong buffer size, or a DLL override forcing the wrong implementation.
 - Wine exposes several audio drivers; if one fails, try another. Record which one worked in your prefix template.
 

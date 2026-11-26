@@ -178,7 +178,7 @@ Note the consequence for legacy titles: an old 32-bit D3D7 game on Apple Silicon
 2. Pick a frontend: CrossOver for a supported commercial product, or a Whisky fork plus a Wine build for a community setup.
 3. Decide the D3D route: D3DMetal for D3D12 (requires GPTK components), DXMT for D3D10/11 without D3D12, DXVK + KosmicKrisp where a Vulkan path is wanted.
 4. Do **not** supply GPTK's D3DMetal binaries to a wrapper unless the wrapper's documentation tells you to; licensing and component pairing matter.
-5. For a 32-bit legacy game, remember that Rosetta 2 handles only x86-64 macOS code. A 32-bit Windows game needs Wine's WoW64 plus a 32-bit translation path — the same problem as on ARM Linux (module 11.9.3), with fewer ready-made recipes on macOS.
+5. For a 32-bit legacy game, remember that Rosetta 2 handles only x86-64 macOS code. A 32-bit Windows game needs Wine's WoW64 plus a 32-bit translation path — the same problem as on ARM Linux ([Section 11.9.3 — 32-bit support at a glance](11-linux-arm.md#1193-32-bit-support-at-a-glance)), with fewer ready-made recipes on macOS.
 6. Expect kernel anti-cheat to fail, as on every non-Windows host.
 
 ## 12.6 ChromeOS

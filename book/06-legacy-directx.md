@@ -18,7 +18,7 @@ This module is about old games. Direct3D 7, 8 and 9 predate the uniform Vulkan-b
 
 Three consequences drive every decision in this module:
 
-1. **No fixed function in Vulkan.** A translator must synthesise shaders that reproduce the old render-state formula (module 05.9).
+1. **No fixed function in Vulkan.** A translator must synthesise shaders that reproduce the old render-state formula ([Section 5.9 — Fixed-function constraints](05-graphics-translators.md#59-fixed-function-constraints)).
 2. **DirectDraw is part of the problem.** Many games render 3D through D3D7 but draw menus, HUDs and video through DirectDraw. A D3D-only translator is not enough.
 3. **The EXEs are 32-bit.** That constrains DLLs, prefixes and CPU translation on ARM.
 
@@ -116,7 +116,7 @@ Use your own legally acquired copy. IGI is a useful teaching case because it exe
 4. **Apply the Large Address Aware / 4GB patch** if the game runs out of memory on large levels; this is general 32-bit advice from PCGamingWiki, not an IGI-verified fix [NEEDS VERIFICATION: depends on build and installer].
 5. **Runtimes:** install DirectX 7/8-era components and whatever Visual C++ runtime the installer needs. **No `d3dcompiler` is required** for the D3D7 fixed-function path.
 6. **Cap FPS at a stable rate** (30–60 depending on build or patch). Unlimited frame rates destabilise old engines.
-7. **Place the chosen 32-bit wrapper DLL next to the EXE** and set the matching override from module 05.7. Copying without overriding has no effect.
+7. **Place the chosen 32-bit wrapper DLL next to the EXE** and set the matching override from [Section 5.7 — DLL override rules](05-graphics-translators.md#57-dll-override-rules). Copying without overriding has no effect.
 
 ### 6.6.2 Decision tree
 
@@ -138,7 +138,7 @@ Game starts, no 3D / "no 3D card"
        Last resort -> WineD3D (works, but geometry errors reported)
 
 DDERR_UNSUPPORTED
-  -> try Windows XP SP3 [NEEDS VERIFICATION — community report; see §6.6.1]
+  -> try Windows XP SP3 [NEEDS VERIFICATION — community report; see section 6.6.1, "Shared steps"]
 
 Vertex explosions / corrupt geometry
   -> D7VK fixes, DxWrapper options, LAA/4GB patch
@@ -170,7 +170,7 @@ Steps:
 
 1. Use a frontend that provides a **32-bit-capable x86 translation path**. [Box64](https://github.com/ptitSeb/box64) handles 64-bit x86-64, while 32-bit Wine components traditionally need [Box86](https://github.com/ptitSeb/box86); experimental box32 and [FEX](https://github.com/FEX-Emu/FEX) are other routes. The bundled path varies by frontend [NEEDS VERIFICATION: check the exact frontend build].
 2. Use a Vulkan 1.4 driver if you choose D7VK. On Adreno, [Turnip](https://docs.mesa3d.org/drivers/freedreno.html) (Mesa's open-source Vulkan driver) is injected **per app**; the stock Qualcomm driver should remain for the system UI. This needs no root for per-app injection.
-3. Create the 32-bit prefix as in 6.6.1.
+3. Create the 32-bit prefix as in [Section 6.6.1 — Shared steps (Android and ARM Linux)](#661-shared-steps-android-and-arm-linux).
 4. Put the 32-bit `ddraw.dll` next to the EXE and set `WINEDLLOVERRIDES=ddraw=n,b` for DxWrapper, or `ddraw=native,builtin` for D7VK. Do not use both.
 5. Prefer D7VK v2.4 or DXVK-Sarek. **Avoid dgVoodoo2's ARM64EC/CHPE builds** — they target Windows on ARM, not Wine on Android.
 6. Use the frontend's virtual display or a VNC/X server if the game opens a tiny fullscreen window.
@@ -192,7 +192,7 @@ Linux userspace
 
 Steps:
 
-1. Create the 32-bit prefix as in 6.6.1.
+1. Create the 32-bit prefix as in [Section 6.6.1 — Shared steps (Android and ARM Linux)](#661-shared-steps-android-and-arm-linux).
 2. Confirm a Vulkan device with `vulkaninfo --summary` and check the reported driver name. Turnip needs a compatible Adreno (A6xx/A7xx); other SoCs use their own Mesa driver.
 3. Select D7VK for Vulkan 1.4, DXVK-Sarek for Vulkan 1.1/1.2 or mobile-focused builds.
 4. Use [Gamescope](https://github.com/ValveSoftware/gamescope) or a virtual desktop when the game assumes a small fixed resolution.
@@ -204,7 +204,7 @@ Steps:
 |---|---|---|
 | "Bad EXE format" | Prefix / CPU translation | 32-bit `WINEARCH`, 32-bit translator path |
 | "No 3D card" / no 3D | Missing D3D7 wrapper | Install D7VK, DXVK-Sarek or DxWrapper with correct override |
-| `DDERR_UNSUPPORTED` | Windows version reported by Wine | Try XP SP3 [NEEDS VERIFICATION — community report; see §6.6.1] |
+| `DDERR_UNSUPPORTED` | Windows version reported by Wine | Try XP SP3 [NEEDS VERIFICATION — community report]; see [Section 6.6.1 — Shared steps (Android and ARM Linux)](#661-shared-steps-android-and-arm-linux) |
 | Vertex explosions | Fixed-function mismatch / memory | D7VK fixes, DxWrapper options, LAA/4GB patch |
 | Black window, audio works | Presentation / swapchain | Virtual desktop, Gamescope, borderless window |
 | Slowdowns | DDraw locking path / CPU governor | `DdrawNoDrawBufferSysLock`, cap FPS, check translation overhead |

@@ -22,7 +22,7 @@ Android kernel (/dev/kgsl-3d0, Binder, SurfaceFlinger)   <-- host boundary
                                 -> X11 socket -> SurfaceFlinger -> screen
 ```
 
-This is the same logical pipeline as [module 02 §2.10 Variant B](02-pipeline.md), drawn as a build order. It is a *conceptual* dependency map: the X server, audio server and GPU driver are separate host processes, and the translator and graphics translator run alongside the game rather than in strict sequence.
+This is the same logical pipeline as [Section 2.10, Variant B: Android DIY (Termux)](02-pipeline.md#variant-b-android-diy-termux), drawn as a build order. It is a *conceptual* dependency map: the X server, audio server and GPU driver are separate host processes, and the translator and graphics translator run alongside the game rather than in strict sequence.
 
 The Android kernel/userspace boundary matters here. Android provides the Linux kernel and the GPU device node, but its userspace is Bionic, not glibc, and its display stack is SurfaceFlinger, not X11. Termux runs on the Android side of that boundary; proot-distro adds a glibc userspace on top. proot is a `ptrace`-based fake container, not a kernel namespace sandbox ([module 08](08-runtime-prefixes.md)).
 
@@ -42,7 +42,7 @@ Keep plugins from the same source too. You will need [Termux:X11](https://github
 
 ## 10.3 Stage 1 — Keep Android from killing your session
 
-Android 12+ monitors apps that spawn many child processes and kills them to save power. A Wine session (`wineserver` plus game processes) matches that pattern exactly, so the game can die after minutes with no error of its own ([module 08 §8.10](08-runtime-prefixes.md)).
+Android 12+ monitors apps that spawn many child processes and kills them to save power. A Wine session (`wineserver` plus game processes) matches that pattern exactly, so the game can die after minutes with no error of its own ([Section 8.10 — Android phantom process killer](08-runtime-prefixes.md#810-android-phantom-process-killer)).
 
 Mitigations, least to most invasive. The `adb` commands use the [Android Debug Bridge](https://developer.android.com/tools/adb) from a computer or from Termux's `android-tools` package.
 
@@ -107,7 +107,7 @@ export DISPLAY=:1
 
 You can omit `-xstartup` and let Wine create windows on an empty root window. [XServer XSDL](https://github.com/pelya/xserver-xsdl) is an older alternative but has no GL acceleration, so it is unsuitable for translated 3D.
 
-**Audio.** Wine implements Windows audio APIs (XAudio2, DirectSound, WASAPI) and forwards them to a host audio server ([module 08 §8.7](08-runtime-prefixes.md)). In Termux that server is the Termux-patched [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) with AAudio/OpenSL ES sinks, started in TCP mode on the host; [PipeWire](https://pipewire.org/) is packaged but `pipewire-pulse` is not a drop-in replacement (no Android sinks; open upstream issue). Verify sinks with `pactl list short sinks`. Inside the guest, set:
+**Audio.** Wine implements Windows audio APIs (XAudio2, DirectSound, WASAPI) and forwards them to a host audio server ([Section 8.7 — Audio](08-runtime-prefixes.md#87-audio)). In Termux that server is the Termux-patched [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) with AAudio/OpenSL ES sinks, started in TCP mode on the host; [PipeWire](https://pipewire.org/) is packaged but `pipewire-pulse` is not a drop-in replacement (no Android sinks; open upstream issue). Verify sinks with `pactl list short sinks`. Inside the guest, set:
 
 ```sh
 export PULSE_SERVER=127.0.0.1
@@ -148,9 +148,9 @@ This is the most important decision in the DIY build. The table compares what ac
 
 **Why ARM64 Wine is different.** Wine is an API-compatibility layer: it implements Windows APIs but does not itself translate x86 instructions to ARM64. A plain ARM64 Wine cannot run an x86 `.exe` on its own. [Hangover](https://github.com/AndreRH/hangover) supplies DLLs that exploit Microsoft's [ARM64EC](https://learn.microsoft.com/en-us/windows/arm/arm64ec) and [WoW64](https://learn.microsoft.com/en-us/windows/win32/winprog64/running-32-bit-applications) ABIs: Wine and most DLLs execute as native ARM64, while only the game's incompatible code is handed to FEX or Box64. This is an **ABI bridge plus CPU translation**, not Windows API emulation — keep those roles separate in your head.
 
-Termux publishes `hangover-wine` in its `x11-repo`, built against Termux's Bionic prefixes. There is no official `box64` package in Termux, so Box64 must be built yourself (§10.8). The reference launch path uses Hangover Wine; the Box64 path is the fallback if a game fails under FEX.
+Termux publishes `hangover-wine` in its `x11-repo`, built against Termux's Bionic prefixes. There is no official `box64` package in Termux, so Box64 must be built yourself ([Section 10.8 — Install the CPU translator](#108-stage-6--install-the-cpu-translator)). The reference launch path uses Hangover Wine; the Box64 path is the fallback if a game fails under FEX.
 
-**Namespace caveat:** Termux's `hangover-wine` is a Termux-host package, not a Debian/Ubuntu glibc guest package. The staged tests in §10.12 must either run from the Termux host with a prefix in a shared location, or use a Wine build installed inside the glibc guest. Do not assume the Termux binary can simply be invoked after `proot-distro login`.
+**Namespace caveat:** Termux's `hangover-wine` is a Termux-host package, not a Debian/Ubuntu glibc guest package. The staged tests in [Section 10.12 — Minimal test path](#1012-minimal-test-path--prove-each-layer-before-launching-a-game) must either run from the Termux host with a prefix in a shared location, or use a Wine build installed inside the glibc guest. Do not assume the Termux binary can simply be invoked after `proot-distro login`.
 
 ## 10.8 Stage 6 — Install the CPU translator
 
@@ -205,7 +205,7 @@ Use an **absolute** path. `VK_ICD_FILENAMES` is a deprecated alias; `VK_ADD_DRIV
 
 Turnip supports Adreno 6xx/7xx/8xx (Vulkan 1.3 on A6xx, 1.4 on A7xx; no A5xx). [Freedreno](https://docs.mesa3d.org/drivers/freedreno.html) supplies OpenGL/OpenGL ES; [Zink](https://docs.mesa3d.org/drivers/zink.html) implements OpenGL on top of Vulkan. Mesa documents Freedreno at desktop OpenGL 4.5 / GLES 3.2; Mesa core implements the 4.6 API but per-driver support varies — check `glxinfo` on your build. Keep the stock Qualcomm driver for Android's UI and use Turnip only in this guest; `/dev/kgsl-3d0` must be accessible, but no root is required. Wrapping the extracted Qualcomm system driver as an ICD has been reported to fail — use the generic loader plus Turnip. Direct3D 12 through VKD3D-Proton is the least reliable tier on this stack.
 
-For Adreno 730 specifics — stable Mesa builds, plain “A6xx/A7xx Standard” variants, and the “do not apply the A740 UBWC hint” rule — see [module 09 §9.5](09-android-frontends.md).
+For Adreno 730 specifics — stable Mesa builds, plain “A6xx/A7xx Standard” variants, and the “do not apply the A740 UBWC hint” rule — see [Section 9.5 — Turnip, drivers and Adreno 730 guidance](09-android-frontends.md#95-turnip-drivers-and-adreno-730-guidance).
 
 ## 10.10 Stage 8 — Graphics translators
 
@@ -219,7 +219,7 @@ export DXVK_HUD=devinfo,fps
 export DXVK_LOG_LEVEL=warn
 ```
 
-The `devinfo` HUD should report Turnip — this is your end-to-end confirmation that DXVK is reaching the driver. Override only the DLLs the game and translator actually use; adding overrides “just in case” is a common self-inflicted failure ([module 08 §8.5](08-runtime-prefixes.md)).
+The `devinfo` HUD should report Turnip — this is your end-to-end confirmation that DXVK is reaching the driver. Override only the DLLs the game and translator actually use; adding overrides “just in case” is a common self-inflicted failure ([Section 8.5 — DLL overrides](08-runtime-prefixes.md#85-dll-overrides)).
 
 ### VKD3D-Proton (D3D12 → Vulkan)
 
@@ -302,7 +302,7 @@ HODLL=libwow64fex.dll hangover-wine hello32.exe
 **Stage 5 — a D3D9 test** (tests graphics translation and driver):
 
 ```sh
-# DXVK x64 DLLs in system32, x32 in syswow64 (§10.10)
+# DXVK x64 DLLs in system32, x32 in syswow64; see section 10.10
 WINEDLLOVERRIDES="d3d9=n,dxgi=n" DXVK_HUD=devinfo,fps wine d3d9-test.exe
 ```
 
@@ -312,7 +312,7 @@ The HUD should show Turnip as the device. A black screen with working audio usua
 
 ```sh
 WINEDLLOVERRIDES="d3d11=n,dxgi=n" wine d3d11-test.exe
-# D3D12 uses VKD3D-Proton (§10.10); expect the weakest results
+# D3D12 uses VKD3D-Proton; see section 10.10; expect the weakest results
 ```
 
 ## 10.13 Performance caveats
@@ -320,7 +320,7 @@ WINEDLLOVERRIDES="d3d11=n,dxgi=n" wine d3d11-test.exe
 | Constraint | Effect | Mitigation |
 |---|---|---|
 | proot `ptrace` interception | Slows filesystem-heavy work; no real cgroups/namespaces/init | Keep assets under `$HOME`; expect lower I/O than native |
-| Phantom process killer | Game dies after minutes | §10.3 mitigations |
+| Phantom process killer | Game dies after minutes | [Section 10.3 — Keep Android from killing your session](#103-stage-1--keep-android-from-killing-your-session) mitigations |
 | big.LITTLE scheduling | Translator threads land on slow cores | `BOX64_SKIPCPU` / `BOX64_MAXCPU` to restrict cores, or set affinity |
 | Thermal limits | Sustained FPS falls after minutes; battery health degrades | Cap FPS, lower resolution, accept a stable 30 FPS |
 | Shader compilation | First run stutters; driver/translator updates invalidate caches | Warm up shaders; do not mistake first-launch stutter for a regression |
@@ -350,11 +350,11 @@ export HODLL64=libarm64ecfex.dll
 exec hangover-wine "$HOME/Games/Game/game.exe"
 ```
 
-Change one variable at a time, keep a copy of any working script as a template, and record the exact Turnip, Wine and translator versions alongside it ([module 08 §8.11](08-runtime-prefixes.md)).
+Change one variable at a time, keep a copy of any working script as a template, and record the exact Turnip, Wine and translator versions alongside it ([Section 8.11 — Prefix templates](08-runtime-prefixes.md#811-prefix-templates)).
 
 ## 10.15 Non-Android hosts
 
-Everything from §10.7 onward applies to ARM Linux too, but the Android-specific stages disappear: there is no Termux, proot or `sharedUserId`, and no SurfaceFlinger — you use the host's glibc userspace, X11/Wayland and Mesa driver directly, with `VK_DRIVER_FILES` or the normal ICD discovery path. That simpler variant is covered in [module 11](11-linux-arm.md). On x86 Linux the CPU-translation stage disappears entirely because the host already executes x86-64 ([module 12](12-linux-x86-and-other-hosts.md)). The layered diagnostic method is unchanged.
+Everything from [Section 10.7 — Choose a Wine architecture strategy](#107-stage-5--choose-a-wine-architecture-strategy) onward applies to ARM Linux too, but the Android-specific stages disappear: there is no Termux, proot or `sharedUserId`, and no SurfaceFlinger — you use the host's glibc userspace, X11/Wayland and Mesa driver directly, with `VK_DRIVER_FILES` or the normal ICD discovery path. That simpler variant is covered in [module 11](11-linux-arm.md). On x86 Linux the CPU-translation stage disappears entirely because the host already executes x86-64 ([module 12](12-linux-x86-and-other-hosts.md)). The layered diagnostic method is unchanged.
 
 ## 10.16 What to remember
 

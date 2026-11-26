@@ -42,7 +42,7 @@ This is a **conceptual data path**, not literal runtime order. In a real process
 
 ## 11.2 Two concepts that decide everything: page size and RootFS
 
-A **page** is the fixed-size block of memory the kernel maps and protects. Most systems use 4096-byte (4K) pages; some ARM configurations use 16K or 64K. Prebuilt x86 binaries and Wine's ARM64EC path assume 4K pages. On a 16K host that assumption breaks — which is why Asahi needs a workaround (section 11.4).
+A **page** is the fixed-size block of memory the kernel maps and protects. Most systems use 4096-byte (4K) pages; some ARM configurations use 16K or 64K. Prebuilt x86 binaries and Wine's ARM64EC path assume 4K pages. On a 16K host that assumption breaks — which is why Asahi needs a workaround ([Section 11.4 — Host 1: Asahi Linux (Apple Silicon)](#114-host-1-asahi-linux-apple-silicon)).
 
 A **RootFS** is a directory tree containing the loader and libraries a guest binary expects — for example an x86-64 `ld-linux-x86-64.so.2` and glibc. It is not a virtual machine disk image. FEX requires one on AArch64; its location defaults to `$HOME/.fex-emu/RootFS/` and can be selected with `FEX_ROOTFS` ([FEX configuration](https://wiki.fex-emu.com/index.php/Development:Configuration)). Box64 instead relies heavily on wrapping *native host* libraries, so its dependency story differs ([Box64 usage docs](https://github.com/ptitSeb/box64/blob/main/docs/USAGE.md)).
 
@@ -116,7 +116,7 @@ Steam wrapper (Fedora Asahi Remix)
 5. For newer games use VKD3D-Proton for D3D12 and DXVK for D3D8–11; for old titles use the legacy wrappers from module 06, remembering they are mostly 32-bit.
 6. Clear shader caches after changing Mesa or a translator; the Mesa cache default is 1 GiB and is controlled with `MESA_SHADER_CACHE_DIR` ([Mesa env vars](https://docs.mesa3d.org/envvars.html)).
 
-**Limitations.** muvm has no Wayland support, slow I/O across the shared filesystem, and a roughly 20% overhead. The x86 overlay is immutable and gives no root, so you cannot freely install packages inside it. Anti-cheat is a particular problem on Asahi (see 11.9). M3 3D is still early.
+**Limitations.** muvm has no Wayland support, slow I/O across the shared filesystem, and a roughly 20% overhead. The x86 overlay is immutable and gives no root, so you cannot freely install packages inside it. Anti-cheat is a particular problem on Asahi (see [Section 11.9 — Limitations that apply across ARM Linux](#119-limitations-that-apply-across-arm-linux)). M3 3D is still early.
 
 ## 11.5 Host 2: Raspberry Pi 4 and 5
 

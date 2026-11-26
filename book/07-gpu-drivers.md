@@ -13,14 +13,14 @@ A **GPU driver** is the software that turns a graphics API command stream into w
 | Userspace module driver (UMD) | In the game/translator process | ICD or UMD | `libvulkan_freedreno.so` ([Turnip](https://docs.mesa3d.org/drivers/freedreno.html)) |
 | Kernel module driver (KMD) | In the host kernel | KMD | `drm/msm`, `panfrost`, `amdgpu` |
 
-The **ICD** (Installable Client Driver) is the userspace Vulkan driver plus the JSON manifest that describes it to the loader. The KMD owns the hardware: memory management, command submission and scheduling. [OpenGL](https://www.opengl.org/) drivers have a similar userspace/kernel split but use a different loader ([GLVND](https://gitlab.freedesktop.org/glvnd/libglvnd) on Linux).
+The **ICD** (Installable Client Driver) is the userspace Vulkan driver plus the JSON manifest that describes it to the loader. The KMD owns the hardware: memory management, command submission and scheduling. [OpenGL](https://www.opengl.org/ "Cross-platform 3D graphics API") drivers have a similar userspace/kernel split but use a different loader ([GLVND](https://gitlab.freedesktop.org/glvnd/libglvnd "OpenGL vendor-neutral dispatch layer on Linux") on Linux).
 
 What the driver is **not**:
 
-- It is not the graphics API. [Vulkan](https://www.vulkan.org/) is a specification; the driver implements it.
-- It is not the graphics translator. [DXVK](https://github.com/doitsujin/dxvk) turns D3D9/10/11 into Vulkan; it does not talk to the GPU itself.
-- It is not the CPU translator. [Box64](https://github.com/ptitSeb/box64) or [FEX](https://github.com/FEX-Emu/FEX) execute x86 code; they do not compile shaders.
-- On Android, it is not necessarily the driver drawing your status bar. See §7.4.
+- It is not the graphics API. [Vulkan](https://www.vulkan.org/ "Low-overhead 3D graphics and compute API") is a specification; the driver implements it.
+- It is not the graphics translator. [DXVK](https://github.com/doitsujin/dxvk "Direct3D-to-Vulkan translation layer for Wine/Proton") turns D3D9/10/11 into Vulkan; it does not talk to the GPU itself.
+- It is not the CPU translator. [Box64](https://github.com/ptitSeb/box64 "x86-64-to-ARM64 dynamic binary translator") or [FEX](https://github.com/FEX-Emu/FEX "x86/x86-64-to-ARM64 dynamic binary translator") execute x86 code; they do not compile shaders.
+- On Android, it is not necessarily the driver drawing your status bar. See [Section 7.4 — Runtime driver vs display/compositor driver](#74-runtime-driver-vs-displaycompositor-driver).
 
 A conceptual view of the path:
 
@@ -76,7 +76,7 @@ The important fields:
 
 Because the loader reads manifests, you can install several drivers and choose per process without uninstalling anything.
 
-Legacy note: a game that uses Direct3D 7/8/9 may reach this layer through very different paths. [D7VK](https://github.com/WinterSnowfall/d7vk) and [D8VK](https://github.com/AlpyneDreams/d8vk) target Vulkan, [DXVK](https://github.com/doitsujin/dxvk) targets Vulkan for D3D9–11, while WineD3D (part of [Wine](https://gitlab.winehq.org/wine/wine)) can use an OpenGL backend. [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) wraps Glide, DirectDraw and D3D3–9 into **D3D11 or D3D12** (or WARP). If your path is WineD3D on its OpenGL backend, the Vulkan ICD is irrelevant; the OpenGL driver choices in §7.5 still matter. This is why “install the newest Turnip” fixes some old games and does nothing for others.
+Legacy note: a game that uses Direct3D 7/8/9 may reach this layer through very different paths. [D7VK](https://github.com/WinterSnowfall/d7vk) and [D8VK](https://github.com/AlpyneDreams/d8vk) target Vulkan, [DXVK](https://github.com/doitsujin/dxvk) targets Vulkan for D3D9–11, while WineD3D (part of [Wine](https://gitlab.winehq.org/wine/wine)) can use an OpenGL backend. [dgVoodoo2](https://www.dege.freeweb.hu/dgVoodoo2/) wraps Glide, DirectDraw and D3D3–9 into **D3D11 or D3D12** (or WARP). If your path is WineD3D on its OpenGL backend, the Vulkan ICD is irrelevant; the OpenGL driver choices in [Section 7.5 — Driver matrix by GPU family](#75-driver-matrix-by-gpu-family) still matter. This is why “install the newest Turnip” fixes some old games and does nothing for others.
 
 ## 7.3 Choosing an ICD with environment variables
 
@@ -99,7 +99,7 @@ vulkaninfo --summary
 Two important behaviours:
 
 1. The loader ignores ICD and layer environment variables under elevated privileges. If selection “does nothing” under `sudo` or a privileged helper, that is expected, not a driver bug ([Khronos loader architecture](https://github.com/KhronosGroup/Vulkan-Loader/blob/main/docs/LoaderInterfaceArchitecture.md#elevated-privilege-caveats)).
-2. Android is different. A normal Android app cannot set `VK_DRIVER_FILES` to change its Vulkan driver; per-app injection is the route (§7.4).
+2. Android is different. A normal Android app cannot set `VK_DRIVER_FILES` to change its Vulkan driver; per-app injection is the route ([Section 7.4 — Runtime driver vs display/compositor driver](#74-runtime-driver-vs-displaycompositor-driver)).
 
 **Verify, do not assume.** [vulkaninfo](https://github.com/KhronosGroup/Vulkan-Tools) is the authoritative check:
 
@@ -172,7 +172,7 @@ Turnip is Mesa's Vulkan driver for Adreno, shipped as part of [Freedreno](https:
 
 **Chip support.** A6xx parts 640/650/660 are mature; A7xx parts 710/720/722/725/730/732/735/740/750 have Vulkan 1.4; A8xx OpenGL arrived in Mesa 26.0 with Vulkan still experimental. There is no A5xx support.
 
-**Kernel split.** Mainline Linux uses `drm/msm`; stock Android uses KGSL `/dev/kgsl-3d0`. A Turnip build is compiled against one kernel ABI, so a build for mainline will not drive a KGSL device and vice versa. Per-app use needs no root, but the device node must be accessible to the app's process. System-wide replacement needs unlocked-bootloader-level changes and a SONAME fix, as described in §7.4.
+**Kernel split.** Mainline Linux uses `drm/msm`; stock Android uses KGSL `/dev/kgsl-3d0`. A Turnip build is compiled against one kernel ABI, so a build for mainline will not drive a KGSL device and vice versa. Per-app use needs no root, but the device node must be accessible to the app's process. System-wide replacement needs unlocked-bootloader-level changes and a SONAME fix, as described in [Section 7.4 — Runtime driver vs display/compositor driver](#74-runtime-driver-vs-displaycompositor-driver).
 
 **TU_DEBUG and properties.** Useful values from the [Mesa environment variable reference](https://docs.mesa3d.org/envvars.html) and Freedreno docs include `sysmem`, `gmem`, `nobin`/`forcebin`, `noubwc`, `nolrz`, `flushall`, `syncdraw`, `rd`. On Mesa for Android these map to system properties: `debug.*` works unrooted, `vendor.*` needs root.
 
@@ -191,7 +191,7 @@ If a specific game regresses, step back one known-good build rather than chasing
 
 | Host | Recommended runtime driver | Notes |
 |---|---|---|
-| Android / Adreno | Stock Qualcomm for UI; Turnip per app for emulation | No-root per-app injection; see §7.6 |
+| Android / Adreno | Stock Qualcomm for UI; Turnip per app for emulation | No-root per-app injection; see [Section 7.6 — Turnip in depth, with safe guidance for Adreno 730](#76-turnip-in-depth-with-safe-guidance-for-adreno-730) |
 | Android / Mali | Stock Arm DDK | PanVK is upstream Mesa and buildable for Android with the NDK; on phones the stock Arm DDK remains default and third-party injection is community territory |
 | ARM Linux / Qualcomm SoC | Freedreno + Turnip (`drm/msm`) | Snapdragon X laptops need firmware extraction |
 | ARM Linux / Mali | Panfrost + PanVK where supported | Check the exact GPU model against PanVK support |
@@ -201,9 +201,9 @@ If a specific game regresses, step back one known-good build rather than chasing
 | x86 Linux / Intel | ANV | Check GuC firmware |
 | x86 Linux / NVIDIA | Proprietary ICD; NVK+Zink as open alternative | Reclocking caveats on NVK |
 | VM / guest | VirGL for light GL; Venus for guest Vulkan; Zink-on-Venus; DRM Native Context when host and guest share a driver family | Venus needs a validated host driver |
-| macOS / ChromeOS | See §7.5; these hosts do not use a desktop Vulkan ICD path in the same way | License- and device-dependent |
+| macOS / ChromeOS | See [Section 7.5 — Driver matrix by GPU family](#75-driver-matrix-by-gpu-family); these hosts do not use a desktop Vulkan ICD path in the same way | License- and device-dependent |
 
-Rollback procedure: record the exact ICD path and version before changing anything; to roll back, point `VK_DRIVER_FILES` at the previous manifest (or restore the previous package) and clear shader caches (§7.8). Never change translator *and* driver in the same test.
+Rollback procedure: record the exact ICD path and version before changing anything; to roll back, point `VK_DRIVER_FILES` at the previous manifest (or restore the previous package) and clear shader caches ([Section 7.8 — Shader caches](#78-shader-caches)). Never change translator *and* driver in the same test.
 
 ## 7.8 Shader caches
 
